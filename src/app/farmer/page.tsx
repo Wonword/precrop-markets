@@ -1,12 +1,12 @@
 import Link from "next/link";
 import {
-  TrendingUp,
   Sprout,
   Calendar,
   DollarSign,
   PlusCircle,
   ArrowRight,
   Package,
+  CheckCircle2,
 } from "lucide-react";
 import StatusBadge from "@/components/marketplace/StatusBadge";
 import { mockContracts } from "@/lib/mockContracts";
@@ -23,16 +23,16 @@ function formatDate(iso: string) {
 }
 
 export default function FarmerDashboardPage() {
-  const totalFunded = myContracts.reduce(
-    (sum, c) => sum + c.fundedAmountUsdc,
-    0
-  );
   const totalValue = myContracts.reduce(
     (sum, c) => sum + c.totalValueUsdc,
     0
   );
+  const soldContracts = myContracts.filter(
+    (c) => c.status === "sold" || c.status === "redeemable" || c.status === "redeemed"
+  );
+  const totalEarned = soldContracts.reduce((sum, c) => sum + c.totalValueUsdc, 0);
   const activeContracts = myContracts.filter(
-    (c) => c.status === "open" || c.status === "funded"
+    (c) => c.status === "available" || c.status === "sold"
   ).length;
   const nextDelivery = myContracts
     .filter((c) => c.status !== "redeemed")
@@ -79,17 +79,17 @@ export default function FarmerDashboardPage() {
             color: "bg-[#1B5E55]/8",
           },
           {
-            label: "Total Funded",
-            value: `${(totalFunded / 1000).toFixed(1)}k`,
-            sub: "USDC raised",
-            icon: <TrendingUp size={20} className="text-[#88C057]" />,
+            label: "Total Earned",
+            value: `${(totalEarned / 1000).toFixed(1)}k`,
+            sub: "USDC from sold contracts",
+            icon: <DollarSign size={20} className="text-[#88C057]" />,
             color: "bg-[#88C057]/10",
           },
           {
-            label: "Funding Rate",
-            value: `${Math.round((totalFunded / totalValue) * 100)}%`,
-            sub: `of ${totalValue.toLocaleString()} USDC goal`,
-            icon: <DollarSign size={20} className="text-[#ADC2B5]" />,
+            label: "Contracts Sold",
+            value: soldContracts.length,
+            sub: `of ${myContracts.length} total`,
+            icon: <CheckCircle2 size={20} className="text-[#ADC2B5]" />,
             color: "bg-[#ADC2B5]/15",
           },
           {
@@ -139,71 +139,52 @@ export default function FarmerDashboardPage() {
         </div>
 
         <div className="divide-y divide-gray-50">
-          {myContracts.map((contract) => {
-            const pct = Math.round(
-              (contract.fundedAmountUsdc / contract.totalValueUsdc) * 100
-            );
-            return (
+          {myContracts.map((contract) => (
+            <div
+              key={contract.id}
+              className="flex flex-col sm:flex-row sm:items-center gap-4 px-6 py-4 hover:bg-[#F2F4F3]/50 transition-colors"
+            >
+              {/* Color indicator */}
               <div
-                key={contract.id}
-                className="flex flex-col sm:flex-row sm:items-center gap-4 px-6 py-4 hover:bg-[#F2F4F3]/50 transition-colors"
-              >
-                {/* Color indicator */}
-                <div
-                  className={`w-10 h-10 rounded-xl bg-gradient-to-br ${contract.placeholderGradient} shrink-0`}
-                />
+                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${contract.placeholderGradient} shrink-0`}
+              />
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-[#1B5E55] text-sm truncate">
-                      {contract.cropName}
-                    </p>
-                    <StatusBadge status={contract.status} />
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Package size={10} />
-                      {contract.quantityKg} kg
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar size={10} />
-                      Delivery {formatDate(contract.deliveryDate)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Funding bar */}
-                <div className="sm:w-36 space-y-1">
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>{pct}%</span>
-                    <span>{contract.fundedAmountUsdc.toLocaleString()} USDC</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#88C057] rounded-full"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Total value */}
-                <div className="text-right shrink-0">
-                  <p className="font-bold text-[#1B5E55] text-sm">
-                    {contract.totalValueUsdc.toLocaleString()} USDC
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-[#1B5E55] text-sm truncate">
+                    {contract.cropName}
                   </p>
-                  <p className="text-xs text-gray-400">total value</p>
+                  <StatusBadge status={contract.status} />
                 </div>
-
-                <Link
-                  href={`/marketplace/${contract.id}`}
-                  className="text-xs font-medium text-[#1B5E55] border border-[#1B5E55]/20 px-3 py-1.5 rounded-full hover:bg-[#1B5E55] hover:text-white transition-all shrink-0"
-                >
-                  View
-                </Link>
+                <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <Package size={10} />
+                    {contract.quantityKg} kg
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar size={10} />
+                    Delivery {formatDate(contract.deliveryDate)}
+                  </span>
+                </div>
               </div>
-            );
-          })}
+
+              {/* Total value */}
+              <div className="text-right shrink-0">
+                <p className="font-bold text-[#1B5E55] text-sm">
+                  {contract.totalValueUsdc.toLocaleString()} USDC
+                </p>
+                <p className="text-xs text-gray-400">contract value</p>
+              </div>
+
+              <Link
+                href={`/marketplace/${contract.id}`}
+                className="text-xs font-medium text-[#1B5E55] border border-[#1B5E55]/20 px-3 py-1.5 rounded-full hover:bg-[#1B5E55] hover:text-white transition-all shrink-0"
+              >
+                View
+              </Link>
+            </div>
+          ))}
         </div>
       </div>
 

@@ -6,7 +6,6 @@ import {
   Calendar,
   Package,
   Shield,
-  TrendingUp,
   ExternalLink,
   Sprout,
   User,
@@ -37,12 +36,6 @@ export default async function ContractDetailPage({
   const { id } = await params;
   const contract = mockContracts.find((c) => c.id === id);
   if (!contract) notFound();
-
-  const pct = Math.min(
-    100,
-    Math.round((contract.fundedAmountUsdc / contract.totalValueUsdc) * 100)
-  );
-  const remaining = contract.totalValueUsdc - contract.fundedAmountUsdc;
 
   return (
     <div className="min-h-screen bg-[#F2F4F3] flex flex-col">
@@ -190,47 +183,18 @@ export default async function ContractDetailPage({
                 </p>
               </div>
 
-              {/* Funding progress */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center gap-1.5 text-gray-600 font-medium">
-                    <TrendingUp size={14} className="text-[#88C057]" />
-                    {pct}% funded
-                  </span>
-                  {contract.status === "open" && (
-                    <span className="text-[#1B5E55] font-semibold">
-                      {remaining.toLocaleString()} USDC remaining
-                    </span>
-                  )}
-                </div>
-                <div className="h-2.5 rounded-full bg-[#F2F4F3] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#88C057] to-[#6fa344] transition-all duration-700"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>
-                    {contract.fundedAmountUsdc.toLocaleString()} USDC raised
-                  </span>
-                  <span>
-                    Goal: {contract.totalValueUsdc.toLocaleString()} USDC
-                  </span>
-                </div>
-              </div>
-
               {/* Action button */}
-              {contract.status === "open" && (
+              {contract.status === "available" && (
                 <button className="w-full bg-[#88C057] hover:bg-[#6fa344] text-black font-bold py-4 rounded-xl transition-colors text-base">
                   Buy Contract — {contract.totalValueUsdc.toLocaleString()} USDC
                 </button>
               )}
-              {contract.status === "funded" && (
+              {contract.status === "sold" && (
                 <button
                   disabled
                   className="w-full bg-[#ADC2B5]/30 text-gray-400 font-bold py-4 rounded-xl cursor-not-allowed text-base"
                 >
-                  Fully Funded
+                  Sold
                 </button>
               )}
               {contract.status === "redeemable" && (
@@ -248,7 +212,7 @@ export default async function ContractDetailPage({
               )}
 
               {/* Pay with card note */}
-              {contract.status === "open" && (
+              {contract.status === "available" && (
                 <p className="text-xs text-center text-gray-400">
                   Pay with credit card — converted to USDC automatically via
                   Coinbase

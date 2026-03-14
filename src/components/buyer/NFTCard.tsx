@@ -102,7 +102,7 @@ export default function NFTCard({
               ✓ Delivery Complete
             </div>
           )}
-          {(contract.status === "open" || contract.status === "funded") && (
+          {(contract.status === "available" || contract.status === "sold") && (
             <div className="flex-1 bg-[#ADC2B5]/15 text-[#1B5E55]/60 text-xs font-semibold py-2.5 rounded-xl text-center">
               Awaiting Harvest
             </div>

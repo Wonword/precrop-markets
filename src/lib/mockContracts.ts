@@ -16,8 +16,7 @@ export const mockContracts: CropContract[] = [
     quantityKg: 500,
     pricePerKgUsdc: 1.85,
     totalValueUsdc: 925,
-    fundedAmountUsdc: 740,
-    status: "open",
+    status: "available",
     description:
       "Organically grown Red Fife wheat — a 19th-century Canadian landrace variety prized by artisan bakers for its complex, nutty flavour and superior gluten structure.",
     gradingStandard: "USDA Organic Certified",
@@ -40,8 +39,7 @@ export const mockContracts: CropContract[] = [
     quantityKg: 300,
     pricePerKgUsdc: 2.4,
     totalValueUsdc: 720,
-    fundedAmountUsdc: 720,
-    status: "funded",
+    status: "sold",
     description:
       "Vibrant purple hull-less barley grown without pesticides. High in anthocyanins and beta-glucan. Sought after by specialty breweries and health food distributors.",
     gradingStandard: "Oregon Tilth Certified Organic",
@@ -64,8 +62,7 @@ export const mockContracts: CropContract[] = [
     quantityKg: 200,
     pricePerKgUsdc: 4.2,
     totalValueUsdc: 840,
-    fundedAmountUsdc: 336,
-    status: "open",
+    status: "available",
     description:
       "Authentic San Marzano-style tomatoes grown from Italian heirloom seed stock. Low acidity, meaty flesh, and exceptional sauce quality. Pre-contracted for restaurant use.",
     gradingStandard: "California Certified Organic Farmers (CCOF)",
@@ -87,7 +84,6 @@ export const mockContracts: CropContract[] = [
     quantityKg: 400,
     pricePerKgUsdc: 3.1,
     totalValueUsdc: 1240,
-    fundedAmountUsdc: 1240,
     status: "redeemable",
     description:
       "Ancient emmer farro — one of the first domesticated crops. Rich, nutty flavour with a pleasantly chewy texture. Popular with fine dining restaurants and specialty grain distributors.",
@@ -110,8 +106,7 @@ export const mockContracts: CropContract[] = [
     quantityKg: 80,
     pricePerKgUsdc: 22.0,
     totalValueUsdc: 1760,
-    fundedAmountUsdc: 1056,
-    status: "open",
+    status: "available",
     description:
       "Hand-harvested black garlic, slow-fermented over 40 days. Balsamic-sweet umami depth. Highly prized by Michelin-starred chefs and high-end specialty food distributors.",
     gradingStandard: "GAP Certified",
@@ -133,8 +128,7 @@ export const mockContracts: CropContract[] = [
     quantityKg: 350,
     pricePerKgUsdc: 2.8,
     totalValueUsdc: 980,
-    fundedAmountUsdc: 196,
-    status: "open",
+    status: "available",
     description:
       "Heirloom blue popcorn grown from Cherokee heritage seed. Vivid blue kernels, tender hull-less pop. Prized by specialty snack brands and farm-to-table restaurants.",
     gradingStandard: "Non-GMO Project Verified",
@@ -156,7 +150,6 @@ export const mockContracts: CropContract[] = [
     quantityKg: 2,
     pricePerKgUsdc: 3200,
     totalValueUsdc: 6400,
-    fundedAmountUsdc: 6400,
     status: "redeemed",
     description:
       "Hand-harvested saffron threads from crocus sativus. ISO 3632 Grade 1. Laboratory tested for crocin, picrocrocin, and safranal levels. For specialty importers and luxury food brands.",
@@ -179,8 +172,7 @@ export const mockContracts: CropContract[] = [
     quantityKg: 600,
     pricePerKgUsdc: 1.65,
     totalValueUsdc: 990,
-    fundedAmountUsdc: 594,
-    status: "open",
+    status: "available",
     description:
       "Ancient European spelt — higher protein and fibre than modern wheat. Nuttier, more digestible. Ideal for artisan bakers, pasta makers, and specialty health food retailers.",
     gradingStandard: "Pennsylvania Certified Organic",
@@ -201,8 +193,8 @@ export const cropCategories = [
 
 export const contractStatuses = [
   { value: "all", label: "All Status" },
-  { value: "open", label: "Open" },
-  { value: "funded", label: "Fully Funded" },
+  { value: "available", label: "Available" },
+  { value: "sold", label: "Sold" },
   { value: "redeemable", label: "Ready to Redeem" },
   { value: "redeemed", label: "Completed" },
 ];

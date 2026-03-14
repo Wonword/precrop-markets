@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Calendar, Package, TrendingUp } from "lucide-react";
+import { MapPin, Calendar, Package } from "lucide-react";
 import { CropContract } from "@/types/contract";
 import StatusBadge from "./StatusBadge";
 
@@ -11,17 +11,7 @@ function formatDate(iso: string) {
   });
 }
 
-function fundedPercent(contract: CropContract) {
-  return Math.min(
-    100,
-    Math.round((contract.fundedAmountUsdc / contract.totalValueUsdc) * 100)
-  );
-}
-
 export default function ContractCard({ contract }: { contract: CropContract }) {
-  const pct = fundedPercent(contract);
-  const remaining = contract.totalValueUsdc - contract.fundedAmountUsdc;
-
   return (
     <Link
       href={`/marketplace/${contract.id}`}
@@ -78,27 +68,6 @@ export default function ContractCard({ contract }: { contract: CropContract }) {
         {/* Divider */}
         <div className="border-t border-gray-100" />
 
-        {/* Funding progress */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <TrendingUp size={11} className="text-[#88C057]" />
-              {pct}% funded
-            </span>
-            {contract.status === "open" && (
-              <span className="text-[#1B5E55] font-medium">
-                {remaining.toLocaleString()} USDC left
-              </span>
-            )}
-          </div>
-          <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-[#88C057] transition-all duration-500"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-        </div>
-
         {/* Price + CTA */}
         <div className="flex items-center justify-between pt-1">
           <div>
@@ -111,7 +80,7 @@ export default function ContractCard({ contract }: { contract: CropContract }) {
             </div>
           </div>
 
-          {contract.status === "open" ? (
+          {contract.status === "available" ? (
             <button className="bg-[#88C057] hover:bg-[#6fa344] text-black text-sm font-semibold px-5 py-2.5 rounded-full transition-colors">
               Buy Contract
             </button>
@@ -121,7 +90,7 @@ export default function ContractCard({ contract }: { contract: CropContract }) {
             </button>
           ) : (
             <span className="text-xs text-gray-400 font-medium px-4 py-2.5 rounded-full border border-gray-200">
-              {contract.status === "funded" ? "Fully Funded" : "Completed"}
+              {contract.status === "sold" ? "Sold" : "Completed"}
             </span>
           )}
         </div>

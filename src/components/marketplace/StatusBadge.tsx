@@ -4,12 +4,12 @@ const config: Record<
   ContractStatus,
   { label: string; className: string }
 > = {
-  open: {
-    label: "Open",
+  available: {
+    label: "Available",
     className: "bg-[#88C057]/15 text-[#4a7a1e] border border-[#88C057]/30",
   },
-  funded: {
-    label: "Fully Funded",
+  sold: {
+    label: "Sold",
     className: "bg-[#ADC2B5]/20 text-[#1B5E55] border border-[#ADC2B5]/40",
   },
   redeemable: {
@@ -28,7 +28,7 @@ export default function StatusBadge({ status }: { status: ContractStatus }) {
     <span
       className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${className}`}
     >
-      {status === "open" && (
+      {status === "available" && (
         <span className="w-1.5 h-1.5 rounded-full bg-[#88C057] mr-1.5 animate-pulse" />
       )}
       {label}

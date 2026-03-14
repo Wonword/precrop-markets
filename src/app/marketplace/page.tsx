@@ -58,12 +58,8 @@ export default function MarketplacePage() {
       case "price-desc":
         result.sort((a, b) => b.totalValueUsdc - a.totalValueUsdc);
         break;
-      case "funded":
-        result.sort(
-          (a, b) =>
-            b.fundedAmountUsdc / b.totalValueUsdc -
-            a.fundedAmountUsdc / a.totalValueUsdc
-        );
+      case "quantity":
+        result.sort((a, b) => b.quantityKg - a.quantityKg);
         break;
       default: // newest
         result.sort(
@@ -75,7 +71,7 @@ export default function MarketplacePage() {
     return result;
   }, [search, category, status, sortBy]);
 
-  const openCount = mockContracts.filter((c) => c.status === "open").length;
+  const openCount = mockContracts.filter((c) => c.status === "available").length;
   const totalUsdc = mockContracts.reduce(
     (sum, c) => sum + c.totalValueUsdc,
     0

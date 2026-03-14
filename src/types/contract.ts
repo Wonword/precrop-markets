@@ -1,4 +1,4 @@
-export type ContractStatus = "open" | "funded" | "redeemable" | "redeemed";
+export type ContractStatus = "available" | "sold" | "redeemable" | "redeemed";
 
 export type CropCategory =
   | "grain"
@@ -23,11 +23,10 @@ export interface CropContract {
   quantityKg: number;
   pricePerKgUsdc: number;
   totalValueUsdc: number;
-  fundedAmountUsdc: number;
   status: ContractStatus;
   description: string;
   gradingStandard: string;
-  placeholderGradient: string; // Tailwind gradient classes
+  placeholderGradient: string;
   mintedAt: string;
   contractAddress?: string;
 }

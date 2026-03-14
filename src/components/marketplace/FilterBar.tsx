@@ -91,7 +91,7 @@ export default function FilterBar({
             <option value="delivery">Delivery Date</option>
             <option value="price-asc">Price: Low → High</option>
             <option value="price-desc">Price: High → Low</option>
-            <option value="funded">Most Funded</option>
+            <option value="quantity">Largest Quantity</option>
           </select>
 
           {/* Result count */}
