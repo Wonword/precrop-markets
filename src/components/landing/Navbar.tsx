@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const navLinks = [
   { label: "Marketplace", href: "/marketplace" },
@@ -10,6 +11,63 @@ const navLinks = [
   { label: "For Buyers", href: "#buyers" },
   { label: "How It Works", href: "#how-it-works" },
 ];
+
+/** Precrop-branded wallet connect button */
+function WalletButton() {
+  return (
+    <ConnectButton.Custom>
+      {({
+        account,
+        chain,
+        openAccountModal,
+        openChainModal,
+        openConnectModal,
+        mounted,
+      }) => {
+        const ready = mounted;
+        const connected = ready && account && chain;
+
+        if (!ready) return null;
+
+        if (!connected) {
+          return (
+            <button
+              onClick={openConnectModal}
+              className="bg-[#88C057] hover:bg-[#6fa344] text-black text-sm font-semibold px-5 py-2 rounded-full transition-colors"
+            >
+              Connect Wallet
+            </button>
+          );
+        }
+
+        if (chain.unsupported) {
+          return (
+            <button
+              onClick={openChainModal}
+              className="bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-5 py-2 rounded-full transition-colors"
+            >
+              Wrong Network
+            </button>
+          );
+        }
+
+        return (
+          <button
+            onClick={openAccountModal}
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold px-4 py-2 rounded-full transition-colors border border-white/20"
+          >
+            {chain.hasIcon && chain.iconUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={chain.iconUrl} alt={chain.name} className="w-4 h-4 rounded-full" />
+            )}
+            <span className="max-w-[100px] truncate">{account.displayName}</span>
+            <span className="text-white/60">{account.displayBalance}</span>
+          </button>
+        );
+      }}
+    </ConnectButton.Custom>
+  );
+}
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,7 +103,7 @@ export default function Navbar() {
         </Link>
 
         {/* Right nav */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-6">
           {navLinks.slice(2).map((link) => (
             <Link
               key={link.href}
@@ -55,12 +113,7 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/marketplace"
-            className="bg-[#88C057] hover:bg-[#6fa344] text-black text-sm font-semibold px-5 py-2 rounded-full transition-colors"
-          >
-            Get Started
-          </Link>
+          <WalletButton />
         </nav>
 
         {/* Mobile: icon logo */}
@@ -97,13 +150,9 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/marketplace"
-            onClick={() => setMenuOpen(false)}
-            className="bg-[#88C057] hover:bg-[#6fa344] text-black text-sm font-semibold px-5 py-3 rounded-full text-center transition-colors mt-2"
-          >
-            Get Started
-          </Link>
+          <div className="mt-2">
+            <WalletButton />
+          </div>
         </div>
       )}
     </header>

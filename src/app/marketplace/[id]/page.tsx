@@ -13,6 +13,7 @@ import {
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import StatusBadge from "@/components/marketplace/StatusBadge";
+import BuyPanel from "@/components/marketplace/BuyPanel";
 import { mockContracts } from "@/lib/mockContracts";
 
 function formatDate(iso: string) {
@@ -192,32 +193,7 @@ export default async function ContractDetailPage({
               </div>
 
               {/* Action button */}
-              {contract.status === "available" && (
-                <button className="w-full bg-[#88C057] hover:bg-[#6fa344] text-black font-bold py-4 rounded-xl transition-colors text-base">
-                  Buy Contract — {contract.totalValueUsdc.toLocaleString()} USDC
-                </button>
-              )}
-              {contract.status === "sold" && (
-                <button
-                  disabled
-                  className="w-full bg-[#ADC2B5]/30 text-gray-400 font-bold py-4 rounded-xl cursor-not-allowed text-base"
-                >
-                  Sold
-                </button>
-              )}
-              {contract.status === "redeemable" && (
-                <button className="w-full bg-[#1B5E55] hover:bg-[#143f39] text-white font-bold py-4 rounded-xl transition-colors text-base">
-                  Redeem NFT Contract
-                </button>
-              )}
-              {contract.status === "redeemed" && (
-                <button
-                  disabled
-                  className="w-full bg-gray-100 text-gray-400 font-bold py-4 rounded-xl cursor-not-allowed text-base"
-                >
-                  Contract Completed
-                </button>
-              )}
+              <BuyPanel contract={contract} />
 
               {/* Pay with card note */}
               {contract.status === "available" && (

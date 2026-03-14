@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import {
   Sprout,
   MapPin,
@@ -11,7 +13,15 @@ import {
   ChevronRight,
   ChevronLeft,
   Info,
+  Wallet,
+  Loader2,
 } from "lucide-react";
+import {
+  MARKET_ABI,
+  CONTRACT_ADDRESSES,
+  contractsReady,
+  toUsdcAtoms,
+} from "@/lib/web3/contracts";
 
 /* ─── Types ─── */
 interface FormData {
@@ -93,10 +103,15 @@ const inputClass =
 /* ─── Main component ─── */
 export default function CreateContractForm() {
   const router = useRouter();
+  const { isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormData>(initialForm);
   const [minting, setMinting] = useState(false);
   const [minted, setMinted] = useState(false);
+  const [mintTxHash, setMintTxHash] = useState<`0x${string}` | undefined>();
+  const [mintedTokenId, setMintedTokenId] = useState<number>(9);
+  const [mintError, setMintError] = useState("");
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<
@@ -123,13 +138,82 @@ export default function CreateContractForm() {
     return true;
   };
 
+  // ── wagmi mint hook ────────────────────────────────────────────────────────
+  const { writeContractAsync: writeMintAndList } = useWriteContract();
+  const { isSuccess: mintTxSuccess } =
+    useWaitForTransactionReceipt({ hash: mintTxHash });
+
   const handleMint = async () => {
+    if (!isConnected) {
+      openConnectModal?.();
+      return;
+    }
     setMinting(true);
-    // Simulated mint delay (will wire up real smart contract later)
-    await new Promise((r) => setTimeout(r, 2500));
+    setMintError("");
+
+    try {
+      // Build metadata JSON for IPFS
+      const metadata = {
+        name: form.cropName,
+        description: form.description,
+        attributes: [
+          { trait_type: "Farm",            value: form.farmName      },
+          { trait_type: "Farmer",          value: form.farmerName    },
+          { trait_type: "Category",        value: form.cropCategory  },
+          { trait_type: "Region",          value: `${form.region}, ${form.state}` },
+          { trait_type: "Country",         value: form.country       },
+          { trait_type: "Quantity (kg)",   value: form.quantityKg    },
+          { trait_type: "Price (USDC/kg)", value: form.pricePerKgUsdc },
+          { trait_type: "Harvest Date",    value: form.harvestDate   },
+          { trait_type: "Delivery Date",   value: form.deliveryDate  },
+          { trait_type: "Grading",         value: form.gradingStandard },
+        ],
+      };
+
+      let metadataURI = `data:application/json,${encodeURIComponent(JSON.stringify(metadata))}`;
+
+      // Upload to IPFS via Pinata API route if configured
+      if (process.env.NEXT_PUBLIC_PINATA_ENABLED === "true") {
+        const res = await fetch("/api/ipfs/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ metadata }),
+        });
+        if (res.ok) {
+          const { uri } = await res.json();
+          metadataURI = uri;
+        }
+      }
+
+      if (!contractsReady) {
+        // Demo mode — skip on-chain tx
+        await new Promise((r) => setTimeout(r, 1800));
+        setMinting(false);
+        setMinted(true);
+        return;
+      }
+
+      const priceAtoms = toUsdcAtoms(totalUsdc);
+      const hash = await writeMintAndList({
+        address: CONTRACT_ADDRESSES.market,
+        abi: MARKET_ABI,
+        functionName: "mintAndList",
+        args: [metadataURI, priceAtoms],
+      });
+      setMintTxHash(hash);
+      // Wait for receipt — mintTxSuccess effect below sets minted
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Mint failed";
+      setMintError(msg.includes("User rejected") ? "Transaction rejected." : msg);
+      setMinting(false);
+    }
+  };
+
+  // When tx confirms → show success
+  if (mintTxSuccess && minting) {
     setMinting(false);
     setMinted(true);
-  };
+  }
 
   /* ─── Minted success screen ─── */
   if (minted) {
@@ -156,7 +240,7 @@ export default function CreateContractForm() {
         <div className="bg-[#F2F4F3] rounded-xl px-6 py-4 text-sm text-gray-600 space-y-1 text-left min-w-64">
           <div className="flex justify-between">
             <span className="text-gray-400">Token ID</span>
-            <span className="font-semibold text-[#1B5E55]">#9</span>
+            <span className="font-semibold text-[#1B5E55]">#{mintedTokenId}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Network</span>
@@ -172,6 +256,19 @@ export default function CreateContractForm() {
             <span className="text-gray-400">Gas</span>
             <span className="font-medium text-[#88C057]">Sponsored ✓</span>
           </div>
+          {mintTxHash && (
+            <div className="flex justify-between pt-1 border-t border-gray-200">
+              <span className="text-gray-400">TX</span>
+              <a
+                href={`https://sepolia.basescan.org/tx/${mintTxHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#88C057] underline text-xs"
+              >
+                {mintTxHash.slice(0, 10)}…
+              </a>
+            </div>
+          )}
         </div>
         <div className="flex gap-3 flex-wrap justify-center">
           <button
@@ -578,41 +675,39 @@ export default function CreateContractForm() {
               ))}
             </div>
 
-            <button
-              onClick={handleMint}
-              disabled={minting}
-              className="w-full bg-[#88C057] hover:bg-[#6fa344] disabled:bg-[#ADC2B5] text-black font-bold py-4 rounded-xl transition-colors text-base flex items-center justify-center gap-2"
-            >
-              {minting ? (
-                <>
-                  <svg
-                    className="animate-spin h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v8H4z"
-                    />
-                  </svg>
-                  Minting on Base…
-                </>
-              ) : (
-                <>
-                  <Zap size={18} />
-                  Mint NFT Contract
-                </>
-              )}
-            </button>
+            {mintError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 text-center">
+                {mintError}
+              </div>
+            )}
+
+            {!isConnected ? (
+              <button
+                onClick={() => openConnectModal?.()}
+                className="w-full bg-[#1B5E55] hover:bg-[#143f39] text-white font-bold py-4 rounded-xl transition-colors text-base flex items-center justify-center gap-2"
+              >
+                <Wallet size={18} />
+                Connect Wallet to Mint
+              </button>
+            ) : (
+              <button
+                onClick={handleMint}
+                disabled={minting}
+                className="w-full bg-[#88C057] hover:bg-[#6fa344] disabled:bg-[#ADC2B5] text-black font-bold py-4 rounded-xl transition-colors text-base flex items-center justify-center gap-2"
+              >
+                {minting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Minting on Base…
+                  </>
+                ) : (
+                  <>
+                    <Zap size={18} />
+                    Mint NFT Contract
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
 

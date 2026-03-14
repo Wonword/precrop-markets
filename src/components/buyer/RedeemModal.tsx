@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { X, MapPin, Check, PackageCheck, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { X, MapPin, Check, PackageCheck, Loader2, ExternalLink } from "lucide-react";
 import { CropContract } from "@/types/contract";
+import { MARKET_ABI, CONTRACT_ADDRESSES, contractsReady } from "@/lib/web3/contracts";
 
 interface RedeemModalProps {
   contract: CropContract;
@@ -13,6 +15,23 @@ interface RedeemModalProps {
 
 const steps = ["Delivery Details", "Confirm & Sign", "Done"];
 
+function TxLink({ hash }: { hash: `0x${string}` }) {
+  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
+  const base = chainId === 8453
+    ? "https://basescan.org/tx/"
+    : "https://sepolia.basescan.org/tx/";
+  return (
+    <a
+      href={`${base}${hash}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-[#88C057] underline flex items-center gap-1 text-xs justify-center"
+    >
+      View on Basescan <ExternalLink size={11} />
+    </a>
+  );
+}
+
 export default function RedeemModal({
   contract,
   paidUsdc,
@@ -20,22 +39,49 @@ export default function RedeemModal({
   onSuccess,
 }: RedeemModalProps) {
   const [step, setStep] = useState(0);
-  const [signing, setSigning] = useState(false);
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [zip, setZip] = useState("");
   const [country, setCountry] = useState("USA");
   const [notes, setNotes] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [redeemTxHash, setRedeemTxHash] = useState<`0x${string}` | undefined>();
 
   const inputClass =
     "w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-[#1B5E55] focus:ring-1 focus:ring-[#1B5E55]/20 transition placeholder:text-gray-300";
 
+  // ── Write: redeem ──────────────────────────────────────────────────────────
+  const { writeContractAsync: writeRedeem } = useWriteContract();
+  const { isLoading: redeemLoading, isSuccess: redeemSuccess } =
+    useWaitForTransactionReceipt({ hash: redeemTxHash });
+
+  useEffect(() => {
+    if (redeemSuccess) {
+      setStep(2);
+    }
+  }, [redeemSuccess]);
+
   const handleSign = async () => {
-    setSigning(true);
-    await new Promise((r) => setTimeout(r, 2200));
-    setSigning(false);
-    setStep(2);
+    if (!contractsReady) {
+      // Demo mode — simulate success without an on-chain tx
+      setStep(2);
+      return;
+    }
+    try {
+      const hash = await writeRedeem({
+        address: CONTRACT_ADDRESSES.market,
+        abi: MARKET_ABI,
+        functionName: "redeem",
+        args: [BigInt(contract.tokenId)],
+      });
+      setRedeemTxHash(hash);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Redemption failed";
+      setErrorMsg(msg.includes("User rejected") ? "Transaction rejected." : msg);
+    }
   };
+
+  const isSigning = redeemLoading && !redeemSuccess;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -99,7 +145,7 @@ export default function RedeemModal({
               <p className="text-sm text-gray-500">
                 Where should{" "}
                 <span className="font-semibold text-[#1B5E55]">
-                  {contract.quantityKg} kg
+                  {contract.quantityKg.toLocaleString()} kg
                 </span>{" "}
                 of {contract.cropName} be delivered?
               </p>
@@ -195,7 +241,7 @@ export default function RedeemModal({
               <div className="bg-[#F2F4F3] rounded-xl p-4 space-y-2.5 text-sm">
                 {[
                   { label: "Contract", value: contract.cropName },
-                  { label: "Quantity", value: `${contract.quantityKg} kg` },
+                  { label: "Quantity", value: `${contract.quantityKg.toLocaleString()} kg` },
                   { label: "Value Paid", value: `${paidUsdc.toLocaleString()} USDC` },
                   {
                     label: "Delivery To",
@@ -218,41 +264,30 @@ export default function RedeemModal({
                 farmer will be notified to fulfil the delivery.
               </div>
 
+              {errorMsg && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 text-center">
+                  {errorMsg}
+                  <button onClick={() => setErrorMsg("")} className="ml-2 underline">
+                    Retry
+                  </button>
+                </div>
+              )}
+
               <button
                 onClick={handleSign}
-                disabled={signing}
+                disabled={isSigning}
                 className="w-full bg-[#88C057] hover:bg-[#6fa344] disabled:bg-[#ADC2B5] text-black font-bold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
               >
-                {signing ? (
+                {isSigning ? (
                   <>
-                    <svg
-                      className="animate-spin h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8H4z"
-                      />
-                    </svg>
-                    Signing on Base…
+                    <Loader2 size={16} className="animate-spin" />
+                    Confirming on Base…
                   </>
                 ) : (
-                  <>
-                    <Zap size={16} />
-                    Sign & Redeem NFT
-                  </>
+                  "Sign & Redeem NFT"
                 )}
               </button>
+              {redeemTxHash && !redeemSuccess && <TxLink hash={redeemTxHash} />}
             </>
           )}
 
@@ -283,9 +318,7 @@ export default function RedeemModal({
               <div className="bg-[#F2F4F3] rounded-xl px-5 py-3 text-xs space-y-1 w-full text-left">
                 <div className="flex justify-between">
                   <span className="text-gray-400">TX Status</span>
-                  <span className="font-semibold text-[#88C057]">
-                    Confirmed ✓
-                  </span>
+                  <span className="font-semibold text-[#88C057]">Confirmed ✓</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">NFT #{contract.tokenId}</span>
@@ -298,6 +331,7 @@ export default function RedeemModal({
                   </span>
                 </div>
               </div>
+              {redeemTxHash && <TxLink hash={redeemTxHash} />}
               <button
                 onClick={onSuccess}
                 className="w-full bg-[#1B5E55] hover:bg-[#143f39] text-white font-semibold py-3 rounded-xl transition-colors text-sm"
