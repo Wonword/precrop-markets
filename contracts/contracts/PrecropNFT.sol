@@ -37,20 +37,23 @@ contract PrecropNFT is ERC721URIStorage, ERC2981, Ownable {
 
     /**
      * @notice Mint a new micro-futures NFT.
-     * @param farmer  The farmer's wallet address (receives the NFT and royalties).
-     * @param metadataURI  IPFS URI pointing to the contract JSON metadata.
-     * @return tokenId The newly minted token ID.
+     * @param to              Address that will hold the NFT (market escrow = address(market)).
+     * @param royaltyReceiver Farmer's wallet — receives ERC-2981 royalties on secondary sales.
+     * @param metadataURI     IPFS URI pointing to the contract JSON metadata.
+     * @param royaltyFeeBps   Royalty fee in basis points (e.g. 500 = 5%).
+     * @return tokenId        The newly minted token ID.
      */
     function mint(
-        address farmer,
+        address to,
+        address royaltyReceiver,
         string calldata metadataURI,
         uint96 royaltyFeeBps
     ) external onlyMarket returns (uint256 tokenId) {
         tokenId = _nextTokenId++;
-        _safeMint(farmer, tokenId);
+        _safeMint(to, tokenId);
         _setTokenURI(tokenId, metadataURI);
-        _setTokenRoyalty(tokenId, farmer, royaltyFeeBps);
-        emit Minted(tokenId, farmer, metadataURI);
+        _setTokenRoyalty(tokenId, royaltyReceiver, royaltyFeeBps);
+        emit Minted(tokenId, royaltyReceiver, metadataURI);
     }
 
     /**

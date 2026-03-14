@@ -83,7 +83,7 @@ export interface PrecropNFTInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "mint",
-    values: [AddressLike, string, BigNumberish]
+    values: [AddressLike, AddressLike, string, BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
@@ -392,7 +392,12 @@ export interface PrecropNFT extends BaseContract {
   marketContract: TypedContractMethod<[], [string], "view">;
 
   mint: TypedContractMethod<
-    [farmer: AddressLike, metadataURI: string, royaltyFeeBps: BigNumberish],
+    [
+      to: AddressLike,
+      royaltyReceiver: AddressLike,
+      metadataURI: string,
+      royaltyFeeBps: BigNumberish
+    ],
     [bigint],
     "nonpayable"
   >;
@@ -494,7 +499,12 @@ export interface PrecropNFT extends BaseContract {
   getFunction(
     nameOrSignature: "mint"
   ): TypedContractMethod<
-    [farmer: AddressLike, metadataURI: string, royaltyFeeBps: BigNumberish],
+    [
+      to: AddressLike,
+      royaltyReceiver: AddressLike,
+      metadataURI: string,
+      royaltyFeeBps: BigNumberish
+    ],
     [bigint],
     "nonpayable"
   >;

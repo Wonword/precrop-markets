@@ -30,9 +30,11 @@ export interface PrecropMarketInterface extends Interface {
       | "buy"
       | "cancelListing"
       | "feeRecipient"
+      | "getListing"
       | "listings"
       | "mintAndList"
       | "nftContract"
+      | "onERC721Received"
       | "owner"
       | "platformFeeBps"
       | "redeem"
@@ -48,6 +50,7 @@ export interface PrecropMarketInterface extends Interface {
       | "ContractMinted"
       | "ContractPurchased"
       | "ContractRedeemed"
+      | "FeeRecipientUpdated"
       | "ListingCancelled"
       | "OwnershipTransferred"
       | "PlatformFeeUpdated"
@@ -67,6 +70,10 @@ export interface PrecropMarketInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "getListing",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "listings",
     values: [BigNumberish]
   ): string;
@@ -77,6 +84,10 @@ export interface PrecropMarketInterface extends Interface {
   encodeFunctionData(
     functionFragment: "nftContract",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "onERC721Received",
+    values: [AddressLike, AddressLike, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
@@ -118,6 +129,7 @@ export interface PrecropMarketInterface extends Interface {
     functionFragment: "feeRecipient",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "getListing", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "listings", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "mintAndList",
@@ -125,6 +137,10 @@ export interface PrecropMarketInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "nftContract",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "onERC721Received",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
@@ -201,6 +217,18 @@ export namespace ContractRedeemedEvent {
   export interface OutputObject {
     tokenId: bigint;
     buyer: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace FeeRecipientUpdatedEvent {
+  export type InputTuple = [newRecipient: AddressLike];
+  export type OutputTuple = [newRecipient: string];
+  export interface OutputObject {
+    newRecipient: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -300,6 +328,18 @@ export interface PrecropMarket extends BaseContract {
 
   feeRecipient: TypedContractMethod<[], [string], "view">;
 
+  getListing: TypedContractMethod<
+    [tokenId: BigNumberish],
+    [
+      [string, bigint, boolean] & {
+        farmer: string;
+        priceUsdc: bigint;
+        active: boolean;
+      }
+    ],
+    "view"
+  >;
+
   listings: TypedContractMethod<
     [arg0: BigNumberish],
     [
@@ -319,6 +359,12 @@ export interface PrecropMarket extends BaseContract {
   >;
 
   nftContract: TypedContractMethod<[], [string], "view">;
+
+  onERC721Received: TypedContractMethod<
+    [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish, arg3: BytesLike],
+    [string],
+    "view"
+  >;
 
   owner: TypedContractMethod<[], [string], "view">;
 
@@ -365,6 +411,19 @@ export interface PrecropMarket extends BaseContract {
     nameOrSignature: "feeRecipient"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "getListing"
+  ): TypedContractMethod<
+    [tokenId: BigNumberish],
+    [
+      [string, bigint, boolean] & {
+        farmer: string;
+        priceUsdc: bigint;
+        active: boolean;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "listings"
   ): TypedContractMethod<
     [arg0: BigNumberish],
@@ -387,6 +446,13 @@ export interface PrecropMarket extends BaseContract {
   getFunction(
     nameOrSignature: "nftContract"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "onERC721Received"
+  ): TypedContractMethod<
+    [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish, arg3: BytesLike],
+    [string],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
@@ -432,6 +498,13 @@ export interface PrecropMarket extends BaseContract {
     ContractRedeemedEvent.InputTuple,
     ContractRedeemedEvent.OutputTuple,
     ContractRedeemedEvent.OutputObject
+  >;
+  getEvent(
+    key: "FeeRecipientUpdated"
+  ): TypedContractEvent<
+    FeeRecipientUpdatedEvent.InputTuple,
+    FeeRecipientUpdatedEvent.OutputTuple,
+    FeeRecipientUpdatedEvent.OutputObject
   >;
   getEvent(
     key: "ListingCancelled"
@@ -487,6 +560,17 @@ export interface PrecropMarket extends BaseContract {
       ContractRedeemedEvent.InputTuple,
       ContractRedeemedEvent.OutputTuple,
       ContractRedeemedEvent.OutputObject
+    >;
+
+    "FeeRecipientUpdated(address)": TypedContractEvent<
+      FeeRecipientUpdatedEvent.InputTuple,
+      FeeRecipientUpdatedEvent.OutputTuple,
+      FeeRecipientUpdatedEvent.OutputObject
+    >;
+    FeeRecipientUpdated: TypedContractEvent<
+      FeeRecipientUpdatedEvent.InputTuple,
+      FeeRecipientUpdatedEvent.OutputTuple,
+      FeeRecipientUpdatedEvent.OutputObject
     >;
 
     "ListingCancelled(uint256)": TypedContractEvent<
