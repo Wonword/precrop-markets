@@ -24,10 +24,18 @@ export default function NFTCard({
     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex flex-col group hover:shadow-md transition-shadow">
       {/* NFT image / gradient */}
       <div
-        className={`relative h-40 bg-gradient-to-br ${contract.placeholderGradient}`}
+        className={`relative h-40 bg-gradient-to-br ${contract.placeholderGradient} overflow-hidden`}
       >
-        {/* Overlay shimmer on owned NFTs */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        {contract.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={contract.imageUrl}
+            alt={contract.cropName}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        {/* Overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
 
         {/* Token badge */}
         <div className="absolute top-3 left-3">

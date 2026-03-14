@@ -17,16 +17,26 @@ export default function ContractCard({ contract }: { contract: CropContract }) {
       href={`/marketplace/${contract.id}`}
       className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
     >
-      {/* Crop image placeholder */}
+      {/* Crop image */}
       <div
-        className={`relative h-44 bg-gradient-to-br ${contract.placeholderGradient} flex items-end p-4`}
+        className={`relative h-44 bg-gradient-to-br ${contract.placeholderGradient} flex items-end p-4 overflow-hidden`}
       >
-        <StatusBadge status={contract.status} />
-        <span className="absolute top-4 right-4 text-xs font-medium text-white/80 bg-black/25 px-2.5 py-1 rounded-full backdrop-blur-sm">
+        {contract.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={contract.imageUrl}
+            alt={contract.cropName}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        {/* Dark gradient overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+        <div className="relative z-10">
+          <StatusBadge status={contract.status} />
+        </div>
+        <span className="absolute top-4 right-4 z-10 text-xs font-medium text-white/90 bg-black/35 px-2.5 py-1 rounded-full backdrop-blur-sm">
           #{contract.tokenId}
         </span>
-        {/* Subtle grain texture overlay */}
-        <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNMCAwTDQgNE0tMSAxTDEgLTFNMyA1TDUgMyIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9zdmc+')]" />
       </div>
 
       {/* Content */}

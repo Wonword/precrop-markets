@@ -61,10 +61,18 @@ export default async function ContractDetailPage({
             <div
               className={`relative rounded-2xl overflow-hidden h-72 bg-gradient-to-br ${contract.placeholderGradient}`}
             >
-              <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNMCAwTDQgNE0tMSAxTDEgLTFNMyA1TDUgMyIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9zdmc+')]" />
-              <div className="absolute bottom-5 left-5 flex items-center gap-3">
+              {contract.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={contract.imageUrl}
+                  alt={contract.cropName}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+              <div className="absolute bottom-5 left-5 flex items-center gap-3 z-10">
                 <StatusBadge status={contract.status} />
-                <span className="text-white/70 text-sm font-medium bg-black/25 px-3 py-1 rounded-full backdrop-blur-sm">
+                <span className="text-white/90 text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
                   NFT #{contract.tokenId}
                 </span>
               </div>

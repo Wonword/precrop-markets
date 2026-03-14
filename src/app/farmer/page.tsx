@@ -144,10 +144,19 @@ export default function FarmerDashboardPage() {
               key={contract.id}
               className="flex flex-col sm:flex-row sm:items-center gap-4 px-6 py-4 hover:bg-[#F2F4F3]/50 transition-colors"
             >
-              {/* Color indicator */}
+              {/* Crop thumbnail */}
               <div
-                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${contract.placeholderGradient} shrink-0`}
-              />
+                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${contract.placeholderGradient} shrink-0 overflow-hidden`}
+              >
+                {contract.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={contract.imageUrl}
+                    alt={contract.cropName}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
 
               {/* Info */}
               <div className="flex-1 min-w-0">

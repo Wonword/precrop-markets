@@ -200,8 +200,17 @@ export default function BuyerDashboardPage() {
               className="flex items-center gap-4 px-6 py-4 hover:bg-[#F2F4F3]/50 transition-colors"
             >
               <div
-                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${owned.contract.placeholderGradient} shrink-0`}
-              />
+                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${owned.contract.placeholderGradient} shrink-0 overflow-hidden`}
+              >
+                {owned.contract.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={owned.contract.imageUrl}
+                    alt={owned.contract.cropName}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-[#1B5E55] text-sm truncate">
                   {owned.contract.cropName}

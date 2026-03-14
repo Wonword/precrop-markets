@@ -29,4 +29,5 @@ export interface CropContract {
   placeholderGradient: string;
   mintedAt: string;
   contractAddress?: string;
+  imageUrl?: string;
 }

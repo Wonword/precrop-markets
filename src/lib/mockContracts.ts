@@ -23,6 +23,7 @@ export const mockContracts: CropContract[] = [
     placeholderGradient: "from-amber-700 to-yellow-600",
     mintedAt: "2026-03-01",
     contractAddress: "0x1a2b3c4d5e6f",
+    imageUrl: "/crops/red-fife-wheat.jpg",
   },
   {
     id: "pcm-002",
@@ -46,6 +47,7 @@ export const mockContracts: CropContract[] = [
     placeholderGradient: "from-purple-800 to-violet-600",
     mintedAt: "2026-02-20",
     contractAddress: "0x2b3c4d5e6f7a",
+    imageUrl: "/crops/purple-barley.jpg",
   },
   {
     id: "pcm-003",
@@ -68,6 +70,7 @@ export const mockContracts: CropContract[] = [
     gradingStandard: "California Certified Organic Farmers (CCOF)",
     placeholderGradient: "from-red-700 to-orange-500",
     mintedAt: "2026-03-05",
+    imageUrl: "/crops/san-marzano-tomatoes.jpg",
   },
   {
     id: "pcm-004",
@@ -90,6 +93,7 @@ export const mockContracts: CropContract[] = [
     gradingStandard: "Certified Naturally Grown",
     placeholderGradient: "from-yellow-800 to-amber-500",
     mintedAt: "2026-01-15",
+    imageUrl: "/crops/emmer-farro.jpg",
   },
   {
     id: "pcm-005",
@@ -112,6 +116,7 @@ export const mockContracts: CropContract[] = [
     gradingStandard: "GAP Certified",
     placeholderGradient: "from-gray-800 to-stone-600",
     mintedAt: "2026-03-08",
+    imageUrl: "/crops/black-garlic.jpg",
   },
   {
     id: "pcm-006",
@@ -134,6 +139,7 @@ export const mockContracts: CropContract[] = [
     gradingStandard: "Non-GMO Project Verified",
     placeholderGradient: "from-blue-800 to-indigo-600",
     mintedAt: "2026-03-10",
+    imageUrl: "/crops/blue-popcorn.jpg",
   },
   {
     id: "pcm-007",
@@ -156,6 +162,7 @@ export const mockContracts: CropContract[] = [
     gradingStandard: "ISO 3632 Grade 1",
     placeholderGradient: "from-orange-600 to-red-500",
     mintedAt: "2025-11-01",
+    imageUrl: "/crops/persian-saffron.jpg",
   },
   {
     id: "pcm-008",
@@ -178,6 +185,7 @@ export const mockContracts: CropContract[] = [
     gradingStandard: "Pennsylvania Certified Organic",
     placeholderGradient: "from-lime-700 to-green-600",
     mintedAt: "2026-03-12",
+    imageUrl: "/crops/spelt-berries.jpg",
   },
 ];
 
