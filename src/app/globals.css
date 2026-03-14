@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
+/* ─── Precrop Markets Brand Tokens ─── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core */
+  --color-teal:       #1B5E55;
+  --color-teal-dark:  #143f39;
+  --color-teal-light: #236b61;
+  --color-black:      #000000;
+  --color-white:      #FFFFFF;
+
+  /* Accents */
+  --color-sprout:     #88C057;
+  --color-sprout-dark:#6fa344;
+  --color-sage:       #ADC2B5;
+
+  /* Neutrals */
+  --color-slate:      #333333;
+  --color-cloud:      #F2F4F3;
+  --color-muted:      #6B7280;
+
+  /* Semantic */
+  --background:       var(--color-white);
+  --foreground:       var(--color-slate);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-teal:       #1B5E55;
+  --color-teal-dark:  #143f39;
+  --color-teal-light: #236b61;
+  --color-sprout:     #88C057;
+  --color-sprout-dark:#6fa344;
+  --color-sage:       #ADC2B5;
+  --color-slate:      #333333;
+  --color-cloud:      #F2F4F3;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Highlight block (like Phamily's pink highlight) ─── */
+.highlight-sprout {
+  background-color: #88C057;
+  color: #000000;
+  padding: 0 0.1em;
+}
+
+/* ─── Animations ─── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.6s ease forwards;
+}
+
+/* ─── Custom scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #F2F4F3; }
+::-webkit-scrollbar-thumb { background: #ADC2B5; border-radius: 3px; }
