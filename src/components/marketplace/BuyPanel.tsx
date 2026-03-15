@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import BuyModal from "./BuyModal";
+import RedeemModal from "@/components/buyer/RedeemModal";
 import { CropContract } from "@/types/contract";
 
 interface BuyPanelProps {
@@ -11,13 +12,14 @@ interface BuyPanelProps {
 
 export default function BuyPanel({ contract }: BuyPanelProps) {
   const router = useRouter();
-  const [showModal, setShowModal] = useState(false);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [showRedeemModal, setShowRedeemModal] = useState(false);
 
   return (
     <>
       {contract.status === "available" && (
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => setShowBuyModal(true)}
           className="w-full bg-[#88C057] hover:bg-[#6fa344] text-black font-bold py-4 rounded-xl transition-colors text-base"
         >
           Buy Contract — {contract.totalValueUsdc.toLocaleString()} USDC
@@ -32,7 +34,10 @@ export default function BuyPanel({ contract }: BuyPanelProps) {
         </button>
       )}
       {contract.status === "redeemable" && (
-        <button className="w-full bg-[#1B5E55] hover:bg-[#143f39] text-white font-bold py-4 rounded-xl transition-colors text-base">
+        <button
+          onClick={() => setShowRedeemModal(true)}
+          className="w-full bg-[#1B5E55] hover:bg-[#143f39] text-white font-bold py-4 rounded-xl transition-colors text-base"
+        >
           Redeem NFT Contract
         </button>
       )}
@@ -45,12 +50,24 @@ export default function BuyPanel({ contract }: BuyPanelProps) {
         </button>
       )}
 
-      {showModal && (
+      {showBuyModal && (
         <BuyModal
           contract={contract}
-          onClose={() => setShowModal(false)}
+          onClose={() => setShowBuyModal(false)}
           onSuccess={() => {
-            setShowModal(false);
+            setShowBuyModal(false);
+            router.push("/buyer");
+          }}
+        />
+      )}
+
+      {showRedeemModal && (
+        <RedeemModal
+          contract={contract}
+          paidUsdc={contract.totalValueUsdc}
+          onClose={() => setShowRedeemModal(false)}
+          onSuccess={() => {
+            setShowRedeemModal(false);
             router.push("/buyer");
           }}
         />
