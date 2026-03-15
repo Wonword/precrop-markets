@@ -2,16 +2,18 @@
  * Contract ABIs and addresses for Precrop Markets
  *
  * Set these env vars:
- *   NEXT_PUBLIC_MARKET_ADDRESS  – deployed PrecropMarket address
- *   NEXT_PUBLIC_USDC_ADDRESS    – USDC address on the target chain
- *   NEXT_PUBLIC_CHAIN_ID        – 8453 (Base) | 84532 (Base Sepolia)
+ *   NEXT_PUBLIC_PRECROP_NFT_ADDRESS    – deployed PrecropNFT address
+ *   NEXT_PUBLIC_PRECROP_MARKET_ADDRESS – deployed PrecropMarket address
+ *   NEXT_PUBLIC_USDC_ADDRESS           – USDC address on the target chain
+ *   NEXT_PUBLIC_CHAIN_ID               – 8453 (Base) | 84532 (Base Sepolia)
  */
 
 // ─── Addresses ────────────────────────────────────────────────────────────────
 
 export const CONTRACT_ADDRESSES = {
-  market: (process.env.NEXT_PUBLIC_MARKET_ADDRESS ?? "") as `0x${string}`,
-  usdc:   (process.env.NEXT_PUBLIC_USDC_ADDRESS   ?? "") as `0x${string}`,
+  nft:    (process.env.NEXT_PUBLIC_PRECROP_NFT_ADDRESS    ?? "") as `0x${string}`,
+  market: (process.env.NEXT_PUBLIC_PRECROP_MARKET_ADDRESS ?? "") as `0x${string}`,
+  usdc:   (process.env.NEXT_PUBLIC_USDC_ADDRESS           ?? "") as `0x${string}`,
 } as const;
 
 /** True when contracts are configured and can be called */

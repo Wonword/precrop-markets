@@ -3,10 +3,14 @@ import { ethers } from "hardhat";
 // USDC on Base Mainnet: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 // USDC on Base Sepolia: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
 const USDC_ADDRESS = process.env.USDC_ADDRESS || "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-const FEE_RECIPIENT = process.env.FEE_RECIPIENT || (await ethers.getSigners())[0].address;
 
 async function main() {
+  if (!process.env.DEPLOYER_PRIVATE_KEY) {
+    throw new Error("DEPLOYER_PRIVATE_KEY is not set in .env.local");
+  }
+
   const [deployer] = await ethers.getSigners();
+  const FEE_RECIPIENT = process.env.FEE_RECIPIENT || deployer.address;
   console.log("Deploying with:", deployer.address);
 
   // 1. Deploy PrecropNFT

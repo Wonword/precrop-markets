@@ -209,7 +209,7 @@ export default async function ContractDetailPage({
                   On-Chain Details
                 </p>
                 {[
-                  { label: "Network", value: "Base (Mainnet)" },
+                  { label: "Network", value: "Base Sepolia (Testnet)" },
                   { label: "Standard", value: "ERC-721" },
                   { label: "Token ID", value: `#${contract.tokenId}` },
                   { label: "Gas Fees", value: "Sponsored by Precrop" },
