@@ -18,6 +18,7 @@ const config: HardhatUserConfig = {
       url: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
       chainId: 84532,
+      gasMultiplier: 1.5, // avoid "replacement transaction underpriced" on retry
     },
     base: {
       url: process.env.NEXT_PUBLIC_BASE_RPC_URL || "https://mainnet.base.org",
