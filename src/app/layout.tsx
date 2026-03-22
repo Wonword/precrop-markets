@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Web3Provider from "@/providers/Web3Provider";
+import AuthProvider from "@/providers/AuthProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -53,7 +54,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} font-[var(--font-inter)] antialiased`}
       >
-        <Web3Provider>{children}</Web3Provider>
+        <Web3Provider>
+          <AuthProvider>{children}</AuthProvider>
+        </Web3Provider>
       </body>
     </html>
   );

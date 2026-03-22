@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
@@ -22,6 +22,8 @@ import {
   contractsReady,
   toUsdcAtoms,
 } from "@/lib/web3/contracts";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 /* ─── Types ─── */
 interface FormData {
@@ -141,6 +143,7 @@ const inputClass =
 /* ─── Main component ─── */
 export default function CreateContractForm() {
   const router = useRouter();
+  const { user, farm } = useAuth();
   const { isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
   const [step, setStep] = useState(1);
@@ -150,6 +153,22 @@ export default function CreateContractForm() {
   const [mintTxHash, setMintTxHash] = useState<`0x${string}` | undefined>();
   const [mintedTokenId, setMintedTokenId] = useState<number>(12);
   const [mintError, setMintError] = useState("");
+
+  // Pre-fill farm fields from profile
+  useEffect(() => {
+    if (farm) {
+      setForm((prev) => ({
+        ...prev,
+        farmName: farm.farm_name ?? prev.farmName,
+        farmerName: farm.contact_name ?? prev.farmerName,
+        farmerEmail: farm.email ?? prev.farmerEmail,
+        farmerPhone: farm.phone ?? prev.farmerPhone,
+        region: farm.region ?? prev.region,
+        state: farm.state ?? prev.state,
+        country: farm.country ?? prev.country,
+      }));
+    }
+  }, [farm]);
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<
@@ -175,10 +194,59 @@ export default function CreateContractForm() {
     return true;
   };
 
+  // ── Supabase save ──────────────────────────────────────────────────────────
+  const saveContractToSupabase = async (tokenId: number, txHash?: string) => {
+    if (!user) return;
+    const supabase = createClient();
+    const qualityStandards: Record<string, string> = {};
+    if (form.qsMoisture)        qualityStandards.moisture = form.qsMoisture;
+    if (form.qsTotalDefects)    qualityStandards.totalDefects = form.qsTotalDefects;
+    if (form.qsTotalDamaged)    qualityStandards.totalDamaged = form.qsTotalDamaged;
+    if (form.qsForeignMaterial) qualityStandards.foreignMaterial = form.qsForeignMaterial;
+    if (form.qsContrasting)     qualityStandards.contrasting = form.qsContrasting;
+    if (form.qsTestWeight)      qualityStandards.testWeight = form.qsTestWeight;
+    if (form.qsSpecialMetrics)  qualityStandards.specialMetrics = form.qsSpecialMetrics;
+
+    await supabase.from("contracts").insert({
+      token_id: tokenId,
+      farm_id: farm?.id ?? null,
+      crop_name: form.cropName,
+      crop_category: form.cropCategory,
+      description: form.description,
+      grading_standard: form.gradingStandard || null,
+      quality_standards: Object.keys(qualityStandards).length > 0 ? qualityStandards : null,
+      quantity_units: parseFloat(form.quantityUnits),
+      unit_type: form.unitType,
+      unit_size_lbs: form.unitSizeLbs ? parseFloat(form.unitSizeLbs) : null,
+      price_per_unit_usdc: parseFloat(form.pricePerUnitUsdc),
+      total_value_usdc: totalUsdc,
+      harvest_date: form.harvestDate || null,
+      delivery_date: form.deliveryDate,
+      delivery_method: form.deliveryMethod,
+      delivery_location: form.deliveryLocation,
+      dockage: form.dockage || null,
+      status: "available",
+      placeholder_gradient: "from-[#1B5E55] to-[#88C057]",
+      contract_address: txHash ? CONTRACT_ADDRESSES.nft : null,
+      minted_at: new Date().toISOString(),
+    });
+  };
+
   // ── wagmi mint hook ────────────────────────────────────────────────────────
   const { writeContractAsync: writeMintAndList } = useWriteContract();
   const { isSuccess: mintTxSuccess } =
     useWaitForTransactionReceipt({ hash: mintTxHash });
+
+  // Watch for tx confirmation and save to Supabase
+  useEffect(() => {
+    if (mintTxSuccess && minting) {
+      saveContractToSupabase(mintedTokenId, mintTxHash).finally(() => {
+        setMinting(false);
+        setMinted(true);
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mintTxSuccess]);
 
   const handleMint = async () => {
     if (!isConnected) {
@@ -231,6 +299,9 @@ export default function CreateContractForm() {
 
       if (!contractsReady) {
         await new Promise((r) => setTimeout(r, 1800));
+        const mockTokenId = Math.floor(Math.random() * 1000) + 100;
+        setMintedTokenId(mockTokenId);
+        await saveContractToSupabase(mockTokenId);
         setMinting(false);
         setMinted(true);
         return;
@@ -250,11 +321,6 @@ export default function CreateContractForm() {
       setMinting(false);
     }
   };
-
-  if (mintTxSuccess && minting) {
-    setMinting(false);
-    setMinted(true);
-  }
 
   /* ─── Minted success screen ─── */
   if (minted) {

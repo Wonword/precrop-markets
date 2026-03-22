@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Sprout,
@@ -7,12 +10,12 @@ import {
   ArrowRight,
   Package,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import StatusBadge from "@/components/marketplace/StatusBadge";
-import { mockContracts } from "@/lib/mockContracts";
-
-// Mock: show first 3 contracts as this farmer's listings
-const myContracts = mockContracts.slice(0, 4);
+import { useAuth } from "@/hooks/useAuth";
+import { createClient } from "@/lib/supabase/client";
+import type { Contract } from "@/types/database";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -23,23 +26,50 @@ function formatDate(iso: string) {
 }
 
 export default function FarmerDashboardPage() {
-  const totalValue = myContracts.reduce(
-    (sum, c) => sum + c.totalValueUsdc,
-    0
-  );
-  const soldContracts = myContracts.filter(
+  const { farm, loading: authLoading } = useAuth();
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!farm?.id) {
+      setLoading(false);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from("contracts")
+      .select("*")
+      .eq("farm_id", farm.id)
+      .order("minted_at", { ascending: false })
+      .then(({ data }) => {
+        setContracts((data as Contract[]) ?? []);
+        setLoading(false);
+      });
+  }, [farm, authLoading]);
+
+  const totalValue = contracts.reduce((s, c) => s + (c.total_value_usdc ?? 0), 0);
+  const soldContracts = contracts.filter(
     (c) => c.status === "sold" || c.status === "redeemable" || c.status === "redeemed"
   );
-  const totalEarned = soldContracts.reduce((sum, c) => sum + c.totalValueUsdc, 0);
-  const activeContracts = myContracts.filter(
+  const totalEarned = soldContracts.reduce((s, c) => s + (c.total_value_usdc ?? 0), 0);
+  const activeContracts = contracts.filter(
     (c) => c.status === "available" || c.status === "sold"
   ).length;
-  const nextDelivery = myContracts
-    .filter((c) => c.status !== "redeemed")
+  const nextDelivery = contracts
+    .filter((c) => c.status !== "redeemed" && c.delivery_date)
     .sort(
       (a, b) =>
-        new Date(a.deliveryDate).getTime() - new Date(b.deliveryDate).getTime()
+        new Date(a.delivery_date!).getTime() - new Date(b.delivery_date!).getTime()
     )[0];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 size={24} className="animate-spin text-[#1B5E55]" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -53,7 +83,7 @@ export default function FarmerDashboardPage() {
             className="text-3xl font-bold text-[#1B5E55]"
             style={{ fontFamily: "var(--font-space-grotesk, sans-serif)" }}
           >
-            Your Dashboard
+            {farm ? `${farm.farm_name}` : "Your Dashboard"}
           </h1>
           <p className="text-gray-500 text-sm mt-1">
             Manage your crop futures contracts and track your earnings.
@@ -74,13 +104,13 @@ export default function FarmerDashboardPage() {
           {
             label: "Active Contracts",
             value: activeContracts,
-            sub: `of ${myContracts.length} total`,
+            sub: `of ${contracts.length} total`,
             icon: <Sprout size={20} className="text-[#1B5E55]" />,
             color: "bg-[#1B5E55]/8",
           },
           {
             label: "Total Earned",
-            value: `${(totalEarned / 1000).toFixed(1)}k`,
+            value: totalEarned > 0 ? `${(totalEarned / 1000).toFixed(1)}k` : "0",
             sub: "USDC from sold contracts",
             icon: <DollarSign size={20} className="text-[#88C057]" />,
             color: "bg-[#88C057]/10",
@@ -88,14 +118,14 @@ export default function FarmerDashboardPage() {
           {
             label: "Contracts Sold",
             value: soldContracts.length,
-            sub: `of ${myContracts.length} total`,
+            sub: `of ${contracts.length} total`,
             icon: <CheckCircle2 size={20} className="text-[#ADC2B5]" />,
             color: "bg-[#ADC2B5]/15",
           },
           {
             label: "Next Delivery",
-            value: nextDelivery ? formatDate(nextDelivery.deliveryDate) : "—",
-            sub: nextDelivery?.cropName ?? "No pending deliveries",
+            value: nextDelivery?.delivery_date ? formatDate(nextDelivery.delivery_date) : "—",
+            sub: nextDelivery?.crop_name ?? "No pending deliveries",
             icon: <Calendar size={20} className="text-[#1B5E55]" />,
             color: "bg-[#1B5E55]/8",
           },
@@ -138,63 +168,79 @@ export default function FarmerDashboardPage() {
           </Link>
         </div>
 
-        <div className="divide-y divide-gray-50">
-          {myContracts.map((contract) => (
-            <div
-              key={contract.id}
-              className="flex flex-col sm:flex-row sm:items-center gap-4 px-6 py-4 hover:bg-[#F2F4F3]/50 transition-colors"
+        {contracts.length === 0 ? (
+          <div className="py-16 text-center">
+            <p className="text-gray-400 text-sm">No contracts yet.</p>
+            <Link
+              href="/farmer/create"
+              className="inline-block mt-3 text-sm font-semibold text-[#1B5E55] hover:underline"
             >
-              {/* Crop thumbnail */}
+              Create your first contract →
+            </Link>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {contracts.slice(0, 5).map((contract) => (
               <div
-                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${contract.placeholderGradient} shrink-0 overflow-hidden`}
+                key={contract.id}
+                className="flex flex-col sm:flex-row sm:items-center gap-4 px-6 py-4 hover:bg-[#F2F4F3]/50 transition-colors"
               >
-                {contract.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={contract.imageUrl}
-                    alt={contract.cropName}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </div>
+                {/* Crop thumbnail */}
+                <div
+                  className={`w-10 h-10 rounded-xl bg-gradient-to-br ${contract.placeholder_gradient ?? "from-[#1B5E55] to-[#88C057]"} shrink-0 overflow-hidden`}
+                >
+                  {contract.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={contract.image_url}
+                      alt={contract.crop_name}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-[#1B5E55] text-sm truncate">
-                    {contract.cropName}
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-[#1B5E55] text-sm truncate">
+                      {contract.crop_name}
+                    </p>
+                    <StatusBadge status={contract.status} />
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
+                    {contract.quantity_units && (
+                      <span className="flex items-center gap-1">
+                        <Package size={10} />
+                        {contract.quantity_units} {contract.unit_type}
+                      </span>
+                    )}
+                    {contract.delivery_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar size={10} />
+                        Delivery {formatDate(contract.delivery_date)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Total value */}
+                <div className="text-right shrink-0">
+                  <p className="font-bold text-[#1B5E55] text-sm">
+                    {(contract.total_value_usdc ?? 0).toLocaleString()} USDC
                   </p>
-                  <StatusBadge status={contract.status} />
+                  <p className="text-xs text-gray-400">contract value</p>
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <Package size={10} />
-                    {contract.quantityUnits} {contract.unitType}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar size={10} />
-                    Delivery {formatDate(contract.deliveryDate)}
-                  </span>
-                </div>
-              </div>
 
-              {/* Total value */}
-              <div className="text-right shrink-0">
-                <p className="font-bold text-[#1B5E55] text-sm">
-                  {contract.totalValueUsdc.toLocaleString()} USDC
-                </p>
-                <p className="text-xs text-gray-400">contract value</p>
+                <Link
+                  href={`/marketplace/${contract.id}`}
+                  className="text-xs font-medium text-[#1B5E55] border border-[#1B5E55]/20 px-3 py-1.5 rounded-full hover:bg-[#1B5E55] hover:text-white transition-all shrink-0"
+                >
+                  View
+                </Link>
               </div>
-
-              <Link
-                href={`/marketplace/${contract.id}`}
-                className="text-xs font-medium text-[#1B5E55] border border-[#1B5E55]/20 px-3 py-1.5 rounded-full hover:bg-[#1B5E55] hover:text-white transition-all shrink-0"
-              >
-                View
-              </Link>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Getting started CTA */}
@@ -221,6 +267,30 @@ export default function FarmerDashboardPage() {
           Create Contract →
         </Link>
       </div>
+
+      {/* Reputation */}
+      {farm && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-[#88C057]/10 flex items-center justify-center shrink-0">
+            <span className="text-2xl font-bold text-[#1B5E55]" style={{ fontFamily: "var(--font-space-grotesk, sans-serif)" }}>
+              {farm.reputation_score}
+            </span>
+          </div>
+          <div>
+            <p className="font-semibold text-[#1B5E55] text-sm">Farm Reputation Score</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Earned through on-time deliveries and buyer reviews. Visible to all buyers.
+            </p>
+          </div>
+          <div className="ml-auto">
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span key={star} className={`text-lg ${star <= Math.round(farm.reputation_score / 20) ? "text-[#88C057]" : "text-gray-200"}`}>★</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
