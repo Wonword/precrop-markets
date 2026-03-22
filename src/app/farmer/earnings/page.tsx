@@ -1,7 +1,10 @@
-import { DollarSign, TrendingUp, Package, Calendar } from "lucide-react";
-import { mockContracts } from "@/lib/mockContracts";
+"use client";
 
-const allContracts = mockContracts;
+import { useState, useEffect } from "react";
+import { DollarSign, TrendingUp, Package, Calendar, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { createClient } from "@/lib/supabase/client";
+import type { Contract } from "@/types/database";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -12,15 +15,44 @@ function formatDate(iso: string) {
 }
 
 export default function FarmerEarningsPage() {
-  const sold = allContracts.filter(
+  const { farm, loading: authLoading } = useAuth();
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!farm?.id) {
+      setLoading(false);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from("contracts")
+      .select("*")
+      .eq("farm_id", farm.id)
+      .order("minted_at", { ascending: false })
+      .then(({ data }) => {
+        setContracts((data as Contract[]) ?? []);
+        setLoading(false);
+      });
+  }, [farm, authLoading]);
+
+  const sold = contracts.filter(
     (c) => c.status === "sold" || c.status === "redeemable" || c.status === "redeemed"
   );
-  const redeemed = allContracts.filter((c) => c.status === "redeemed");
-  const available = allContracts.filter((c) => c.status === "available");
+  const redeemed = contracts.filter((c) => c.status === "redeemed");
+  const available = contracts.filter((c) => c.status === "available");
 
-  const totalEarned = sold.reduce((s, c) => s + c.totalValueUsdc, 0);
-  const pendingValue = available.reduce((s, c) => s + c.totalValueUsdc, 0);
-  const totalContracts = allContracts.length;
+  const totalEarned = sold.reduce((s, c) => s + Number(c.total_value_usdc ?? 0), 0);
+  const pendingValue = available.reduce((s, c) => s + Number(c.total_value_usdc ?? 0), 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 size={24} className="animate-spin text-[#1B5E55]" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -60,7 +92,7 @@ export default function FarmerEarningsPage() {
           {
             label: "Deliveries Complete",
             value: redeemed.length,
-            sub: `of ${totalContracts} total contracts`,
+            sub: `of ${contracts.length} total contracts`,
             icon: <Package size={20} className="text-[#ADC2B5]" />,
             bg: "bg-[#ADC2B5]/15",
           },
@@ -120,18 +152,20 @@ export default function FarmerEarningsPage() {
                 className="flex flex-col sm:flex-row sm:items-center gap-3 px-6 py-4"
               >
                 <div
-                  className={`w-10 h-10 rounded-xl bg-gradient-to-br ${contract.placeholderGradient} shrink-0`}
+                  className={`w-10 h-10 rounded-xl bg-gradient-to-br ${contract.placeholder_gradient ?? "from-[#1B5E55] to-[#88C057]"} shrink-0`}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[#1B5E55] text-sm">{contract.cropName}</p>
+                  <p className="font-semibold text-[#1B5E55] text-sm">{contract.crop_name}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {contract.quantityUnits.toLocaleString()} {contract.unitType} · Delivery{" "}
-                    {formatDate(contract.deliveryDate)}
+                    {contract.quantity_units
+                      ? `${Number(contract.quantity_units).toLocaleString()} ${contract.unit_type}`
+                      : contract.unit_type}
+                    {contract.delivery_date && ` · Delivery ${formatDate(contract.delivery_date)}`}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="font-bold text-[#88C057] text-sm">
-                    +{contract.totalValueUsdc.toLocaleString()} USDC
+                    +{Number(contract.total_value_usdc ?? 0).toLocaleString()} USDC
                   </p>
                   <p className="text-xs text-gray-400 capitalize">{contract.status}</p>
                 </div>
@@ -140,7 +174,6 @@ export default function FarmerEarningsPage() {
           </div>
         )}
 
-        {/* Total row */}
         {sold.length > 0 && (
           <div className="flex items-center justify-between px-6 py-4 bg-[#F2F4F3] border-t border-gray-100">
             <p className="text-sm font-semibold text-[#333333]">Total earned</p>
@@ -159,9 +192,8 @@ export default function FarmerEarningsPage() {
         <div>
           <p className="font-semibold text-[#333333] text-sm">About Payouts</p>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-            USDC from contract purchases is held in the smart contract until delivery is
-            confirmed. Once a buyer redeems their NFT on-chain, funds are released directly
-            to your connected wallet. No middlemen, no waiting periods.
+            USDC from contract purchases is sent directly to your wallet at the moment of sale.
+            When a buyer redeems their NFT on-chain, the delivery is confirmed. No middlemen, no waiting periods.
           </p>
         </div>
       </div>

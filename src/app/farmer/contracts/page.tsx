@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PlusCircle, Package, Calendar, Filter } from "lucide-react";
+import { PlusCircle, Package, Calendar, Filter, Loader2 } from "lucide-react";
 import StatusBadge from "@/components/marketplace/StatusBadge";
-import { mockContracts } from "@/lib/mockContracts";
+import { useAuth } from "@/hooks/useAuth";
+import { createClient } from "@/lib/supabase/client";
+import type { Contract } from "@/types/database";
 import type { ContractStatus } from "@/types/contract";
-
-// Mock: all contracts belong to this farmer
-const allContracts = mockContracts;
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -27,10 +26,39 @@ const STATUS_FILTERS: { label: string; value: ContractStatus | "all" }[] = [
 ];
 
 export default function FarmerContractsPage() {
+  const { farm, loading: authLoading } = useAuth();
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ContractStatus | "all">("all");
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!farm?.id) {
+      setLoading(false);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from("contracts")
+      .select("*")
+      .eq("farm_id", farm.id)
+      .order("minted_at", { ascending: false })
+      .then(({ data }) => {
+        setContracts((data as Contract[]) ?? []);
+        setLoading(false);
+      });
+  }, [farm, authLoading]);
+
   const filtered =
-    filter === "all" ? allContracts : allContracts.filter((c) => c.status === filter);
+    filter === "all" ? contracts : contracts.filter((c) => c.status === filter);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 size={24} className="animate-spin text-[#1B5E55]" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -47,7 +75,7 @@ export default function FarmerContractsPage() {
             My Contracts
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {allContracts.length} total contracts
+            {contracts.length} total contract{contracts.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
@@ -75,8 +103,8 @@ export default function FarmerContractsPage() {
             {label}
             <span className="ml-1.5 opacity-60">
               {value === "all"
-                ? allContracts.length
-                : allContracts.filter((c) => c.status === value).length}
+                ? contracts.length
+                : contracts.filter((c) => c.status === value).length}
             </span>
           </button>
         ))}
@@ -84,7 +112,17 @@ export default function FarmerContractsPage() {
 
       {/* Contract list */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        {filtered.length === 0 ? (
+        {contracts.length === 0 ? (
+          <div className="py-16 text-center">
+            <p className="text-gray-400 text-sm">No contracts yet.</p>
+            <Link
+              href="/farmer/create"
+              className="inline-block mt-3 text-sm font-semibold text-[#1B5E55] hover:underline"
+            >
+              Create your first contract →
+            </Link>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-gray-400 text-sm">
             No contracts with status &quot;{filter}&quot;.
           </div>
@@ -97,13 +135,13 @@ export default function FarmerContractsPage() {
               >
                 {/* Gradient thumbnail */}
                 <div
-                  className={`w-12 h-12 rounded-xl bg-gradient-to-br ${contract.placeholderGradient} shrink-0 overflow-hidden`}
+                  className={`w-12 h-12 rounded-xl bg-gradient-to-br ${contract.placeholder_gradient ?? "from-[#1B5E55] to-[#88C057]"} shrink-0 overflow-hidden`}
                 >
-                  {contract.imageUrl && (
+                  {contract.image_url && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={contract.imageUrl}
-                      alt={contract.cropName}
+                      src={contract.image_url}
+                      alt={contract.crop_name}
                       className="w-full h-full object-cover"
                     />
                   )}
@@ -113,24 +151,30 @@ export default function FarmerContractsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-[#1B5E55] text-sm">
-                      {contract.cropName}
+                      {contract.crop_name}
                     </p>
                     <StatusBadge status={contract.status} />
-                    <span className="text-xs text-gray-300">#{contract.tokenId}</span>
+                    {contract.token_id != null && (
+                      <span className="text-xs text-gray-300">#{contract.token_id}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-400 flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Package size={11} />
-                      {contract.quantityUnits.toLocaleString()} {contract.unitType}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar size={11} />
-                      Delivery {formatDate(contract.deliveryDate)}
-                    </span>
-                    {contract.harvestDate && (
+                    {contract.quantity_units && (
+                      <span className="flex items-center gap-1">
+                        <Package size={11} />
+                        {Number(contract.quantity_units).toLocaleString()} {contract.unit_type}
+                      </span>
+                    )}
+                    {contract.delivery_date && (
                       <span className="flex items-center gap-1">
                         <Calendar size={11} />
-                        Harvest {formatDate(contract.harvestDate)}
+                        Delivery {formatDate(contract.delivery_date)}
+                      </span>
+                    )}
+                    {contract.harvest_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar size={11} />
+                        Harvest {formatDate(contract.harvest_date)}
                       </span>
                     )}
                   </div>
@@ -139,11 +183,13 @@ export default function FarmerContractsPage() {
                 {/* Value */}
                 <div className="text-right shrink-0">
                   <p className="font-bold text-[#1B5E55] text-sm">
-                    {contract.totalValueUsdc.toLocaleString()} USDC
+                    {Number(contract.total_value_usdc ?? 0).toLocaleString()} USDC
                   </p>
-                  <p className="text-xs text-gray-400">
-                    {contract.pricePerUnitUsdc} / {contract.unitType}
-                  </p>
+                  {contract.price_per_unit_usdc && contract.unit_type && (
+                    <p className="text-xs text-gray-400">
+                      {Number(contract.price_per_unit_usdc).toLocaleString()} / {contract.unit_type}
+                    </p>
+                  )}
                 </div>
 
                 {/* Action */}
