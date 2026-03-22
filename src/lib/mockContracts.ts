@@ -286,6 +286,7 @@ export const mockContracts: CropContract[] = [
       "Chickpeas grown to US No. 1 grade standards using intercropping, zero pesticides, and soil conservation practices on the Hi-Line plains of northern Montana. Special separating and cleaning process ensures exceptional purity.",
     placeholderGradient: "from-yellow-600 to-amber-400",
     mintedAt: "2026-03-20",
+    imageUrl: "/crops/Chickpeas.png",
   },
   {
     id: "pcm-010",
@@ -324,6 +325,7 @@ export const mockContracts: CropContract[] = [
       "Premium flax grown to US No. 1 grade on the high plains of northern Montana. Cultivated with intercropping and zero pesticides. Sought after by natural food processors and health product manufacturers.",
     placeholderGradient: "from-blue-600 to-cyan-400",
     mintedAt: "2026-03-20",
+    imageUrl: "/crops/flax seeds.png",
   },
   {
     id: "pcm-011",
@@ -362,6 +364,7 @@ export const mockContracts: CropContract[] = [
       "Hull-less oats grown to US No. 1 grade standards in Chester, Montana. Intercropped with no pesticides for superior grain quality. Ready-to-process with no hulling required — ideal for oat processors and specialty food producers.",
     placeholderGradient: "from-green-600 to-teal-400",
     mintedAt: "2026-03-20",
+    imageUrl: "/crops/Hulless Oats.jpg",
   },
 ];
 
