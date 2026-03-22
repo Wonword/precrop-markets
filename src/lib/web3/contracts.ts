@@ -75,6 +75,49 @@ export const MARKET_ABI = [
     inputs: [{ name: "tokenId", type: "uint256" }],
     outputs: [],
   },
+  // ── Secondary market ──
+  {
+    name: "getSecondaryListing",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [
+      { name: "seller",    type: "address" },
+      { name: "priceUsdc", type: "uint256" },
+      { name: "active",    type: "bool"    },
+    ],
+  },
+  {
+    name: "farmerSecondaryRoyaltyBps",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "relist",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "tokenId",   type: "uint256" },
+      { name: "priceUsdc", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "buySecondary",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "cancelSecondaryListing",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [],
+  },
   // ── Events ──
   {
     name: "ContractMinted",
@@ -101,6 +144,27 @@ export const MARKET_ABI = [
     inputs: [
       { name: "tokenId", type: "uint256", indexed: true },
       { name: "buyer",   type: "address", indexed: true },
+    ],
+  },
+  {
+    name: "SecondaryListed",
+    type: "event",
+    inputs: [
+      { name: "tokenId",   type: "uint256", indexed: true  },
+      { name: "seller",    type: "address", indexed: true  },
+      { name: "priceUsdc", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "SecondaryPurchased",
+    type: "event",
+    inputs: [
+      { name: "tokenId",       type: "uint256", indexed: true  },
+      { name: "buyer",         type: "address", indexed: true  },
+      { name: "priceUsdc",     type: "uint256", indexed: false },
+      { name: "farmer",        type: "address", indexed: false },
+      { name: "farmerRoyalty", type: "uint256", indexed: false },
+      { name: "platformFee",   type: "uint256", indexed: false },
     ],
   },
 ] as const;

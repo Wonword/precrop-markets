@@ -9,14 +9,23 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @title PrecropNFT
  * @notice ERC-721 NFT representing a micro-futures contract for agricultural goods.
- *         Each token is a unique contract between a farmer and a buyer.
- *         Includes ERC-2981 royalty standard so the farmer earns 5% on secondary sales.
+ *
+ *  Royalty structure:
+ *    - Primary sale:   2.5% platform fee (enforced by PrecropMarket)
+ *    - Secondary sale: 2.5% platform fee + 2.5% original farmer (enforced by PrecropMarket)
+ *    - ERC-2981:       Reports 2.5% to original farmer for external marketplace compatibility.
+ *
+ *  The `creator` mapping stores the original farmer address for all secondary-sale royalty
+ *  lookups by PrecropMarket.
  */
 contract PrecropNFT is ERC721URIStorage, ERC2981, Ownable {
     uint256 private _nextTokenId;
 
     // Authorized minter (the PrecropMarket contract)
     address public marketContract;
+
+    // Original creator (farmer) of each token — used for secondary royalty payments
+    mapping(uint256 => address) public creator;
 
     event Minted(uint256 indexed tokenId, address indexed farmer, string metadataURI);
     event Redeemed(uint256 indexed tokenId, address indexed redeemer);
@@ -37,10 +46,10 @@ contract PrecropNFT is ERC721URIStorage, ERC2981, Ownable {
 
     /**
      * @notice Mint a new micro-futures NFT.
-     * @param to              Address that will hold the NFT (market escrow = address(market)).
-     * @param royaltyReceiver Farmer's wallet — receives ERC-2981 royalties on secondary sales.
+     * @param to              Address that will hold the NFT (market escrow).
+     * @param royaltyReceiver Farmer's wallet — stored as creator and ERC-2981 royalty receiver.
      * @param metadataURI     IPFS URI pointing to the contract JSON metadata.
-     * @param royaltyFeeBps   Royalty fee in basis points (e.g. 500 = 5%).
+     * @param royaltyFeeBps   Royalty fee in basis points for ERC-2981 (250 = 2.5%).
      * @return tokenId        The newly minted token ID.
      */
     function mint(
@@ -53,6 +62,7 @@ contract PrecropNFT is ERC721URIStorage, ERC2981, Ownable {
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, metadataURI);
         _setTokenRoyalty(tokenId, royaltyReceiver, royaltyFeeBps);
+        creator[tokenId] = royaltyReceiver;
         emit Minted(tokenId, royaltyReceiver, metadataURI);
     }
 
