@@ -110,23 +110,23 @@ export default async function ContractDetailPage({
                   {
                     icon: <Package size={14} />,
                     label: "Quantity",
-                    value: `${contract.quantityKg.toLocaleString()} kg`,
+                    value: `${contract.quantityUnits.toLocaleString()} ${contract.unitType}${contract.unitSizeLbs ? ` (${contract.unitSizeLbs.toLocaleString()} lbs each)` : ""}`,
                   },
-                  {
+                  ...(contract.harvestDate ? [{
                     icon: <Calendar size={14} />,
                     label: "Harvest",
                     value: formatDate(contract.harvestDate),
-                  },
+                  }] : []),
                   {
                     icon: <Calendar size={14} />,
-                    label: "Delivery",
+                    label: "Earliest Delivery",
                     value: formatDate(contract.deliveryDate),
                   },
-                  {
+                  ...(contract.gradingStandard ? [{
                     icon: <Shield size={14} />,
                     label: "Grading",
                     value: contract.gradingStandard,
-                  },
+                  }] : []),
                 ].map(({ icon, label, value }) => (
                   <div key={label} className="space-y-1">
                     <p className="flex items-center gap-1.5 text-xs text-gray-400 font-medium uppercase tracking-wider">
@@ -148,21 +148,93 @@ export default async function ContractDetailPage({
                   {contract.description}
                 </p>
               </div>
+
+              {/* Quality Standards */}
+              {contract.qualityStandards && Object.values(contract.qualityStandards).some(Boolean) && (
+                <div className="border-t border-gray-100 pt-4">
+                  <h2 className="font-semibold text-[#1B5E55] mb-3 text-sm">
+                    Quality Standards
+                  </h2>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    {[
+                      { label: "Moisture", value: contract.qualityStandards.moisture },
+                      { label: "Total Defects", value: contract.qualityStandards.totalDefects },
+                      { label: "Total Damaged", value: contract.qualityStandards.totalDamaged },
+                      { label: "Foreign Material", value: contract.qualityStandards.foreignMaterial },
+                      { label: "Contrasting", value: contract.qualityStandards.contrasting },
+                      { label: "Test Weight", value: contract.qualityStandards.testWeight },
+                    ]
+                      .filter(({ value }) => value)
+                      .map(({ label, value }) => (
+                        <div key={label} className="flex justify-between border-b border-gray-50 pb-1.5">
+                          <span className="text-gray-400">{label}</span>
+                          <span className="font-medium text-[#333333]">{value}</span>
+                        </div>
+                      ))}
+                  </div>
+                  {contract.qualityStandards.specialMetrics && (
+                    <p className="mt-3 text-xs text-gray-500 bg-[#F2F4F3] rounded-xl px-4 py-3 leading-relaxed">
+                      <span className="font-semibold text-[#1B5E55]">Special Metrics: </span>
+                      {contract.qualityStandards.specialMetrics}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Delivery & Dockage */}
+              {(contract.deliveryMethod || contract.deliveryLocation || contract.dockage) && (
+                <div className="border-t border-gray-100 pt-4 space-y-2 text-sm">
+                  <h2 className="font-semibold text-[#1B5E55] mb-2">Delivery Terms</h2>
+                  {contract.deliveryMethod && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Method</span>
+                      <span className="font-medium text-[#333333]">{contract.deliveryMethod}</span>
+                    </div>
+                  )}
+                  {contract.deliveryLocation && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Location</span>
+                      <span className="font-medium text-[#333333]">{contract.deliveryLocation}</span>
+                    </div>
+                  )}
+                  {contract.dockage && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Dockage</span>
+                      <span className="font-medium text-[#333333] text-right max-w-[60%]">{contract.dockage}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Farm card */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
-              <div className="flex items-center gap-4">
+              <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-[#1B5E55]/10 flex items-center justify-center flex-shrink-0">
                   <Sprout size={20} className="text-[#1B5E55]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-[#1B5E55] text-base">
                     {contract.farmName}
                   </h3>
                   <p className="text-sm text-gray-500">
                     {contract.region}, {contract.state} · {contract.country}
                   </p>
+                  {contract.farmerName && (
+                    <p className="text-sm text-gray-600 mt-1">Contact: {contract.farmerName}</p>
+                  )}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                    {contract.farmerEmail && (
+                      <a href={`mailto:${contract.farmerEmail}`} className="text-xs text-[#1B5E55] hover:underline">
+                        {contract.farmerEmail}
+                      </a>
+                    )}
+                    {contract.farmerPhone && (
+                      <a href={`tel:${contract.farmerPhone}`} className="text-xs text-[#1B5E55] hover:underline">
+                        {contract.farmerPhone}
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -187,8 +259,9 @@ export default async function ContractDetailPage({
                   <span className="text-gray-400 text-lg mb-1">USDC</span>
                 </div>
                 <p className="text-sm text-gray-400 mt-1">
-                  {contract.pricePerKgUsdc} USDC per kg ·{" "}
-                  {contract.quantityKg.toLocaleString()} kg
+                  {contract.pricePerUnitUsdc.toLocaleString()} USDC/{contract.unitType} ·{" "}
+                  {contract.quantityUnits.toLocaleString()} {contract.unitType}
+                  {contract.unitSizeLbs ? `s (${(contract.quantityUnits * contract.unitSizeLbs).toLocaleString()} lbs total)` : ""}
                 </p>
               </div>
 

@@ -216,7 +216,7 @@ export default function BuyerDashboardPage() {
                   {owned.contract.cropName}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {owned.contract.farmName} · {owned.contract.quantityKg} kg
+                  {owned.contract.farmName} · {owned.contract.quantityUnits} {owned.contract.unitType}
                 </p>
               </div>
               <div className="text-right shrink-0">

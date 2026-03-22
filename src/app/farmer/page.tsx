@@ -169,7 +169,7 @@ export default function FarmerDashboardPage() {
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
                   <span className="flex items-center gap-1">
                     <Package size={10} />
-                    {contract.quantityKg} kg
+                    {contract.quantityUnits} {contract.unitType}
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar size={10} />

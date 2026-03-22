@@ -145,7 +145,7 @@ export default function RedeemModal({
               <p className="text-sm text-gray-500">
                 Where should{" "}
                 <span className="font-semibold text-[#1B5E55]">
-                  {contract.quantityKg.toLocaleString()} kg
+                  {contract.quantityUnits.toLocaleString()} {contract.unitType}
                 </span>{" "}
                 of {contract.cropName} be delivered?
               </p>
@@ -241,7 +241,7 @@ export default function RedeemModal({
               <div className="bg-[#F2F4F3] rounded-xl p-4 space-y-2.5 text-sm">
                 {[
                   { label: "Contract", value: contract.cropName },
-                  { label: "Quantity", value: `${contract.quantityKg.toLocaleString()} kg` },
+                  { label: "Quantity", value: `${contract.quantityUnits.toLocaleString()} ${contract.unitType}` },
                   { label: "Value Paid", value: `${paidUsdc.toLocaleString()} USDC` },
                   {
                     label: "Delivery To",

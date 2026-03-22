@@ -66,7 +66,7 @@ export default function ContractCard({ contract }: { contract: CropContract }) {
           </span>
           <span className="flex items-center gap-1">
             <Package size={11} className="text-[#ADC2B5]" />
-            {contract.quantityKg.toLocaleString()} kg
+            {contract.quantityUnits.toLocaleString()} {contract.unitType}
           </span>
         </div>
 
@@ -86,7 +86,7 @@ export default function ContractCard({ contract }: { contract: CropContract }) {
             </span>
             <span className="text-xs text-gray-400 ml-1">USDC</span>
             <div className="text-xs text-gray-400">
-              {contract.pricePerKgUsdc} USDC/kg
+              {contract.pricePerUnitUsdc} USDC/{contract.unitType}
             </div>
           </div>
 

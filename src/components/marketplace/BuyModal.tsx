@@ -48,12 +48,15 @@ export default function BuyModal({ contract, onClose, onSuccess }: BuyModalProps
   const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | undefined>();
   const [buyTxHash, setBuyTxHash] = useState<`0x${string}` | undefined>();
 
+  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
+
   // ── Read USDC allowance ──────────────────────────────────────────────────
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: CONTRACT_ADDRESSES.usdc,
     abi: ERC20_ABI,
     functionName: "allowance",
     args: userAddress ? [userAddress, CONTRACT_ADDRESSES.market] : undefined,
+    chainId,
     query: { enabled: isConnected && contractsReady && !!userAddress },
   });
 
@@ -63,6 +66,7 @@ export default function BuyModal({ contract, onClose, onSuccess }: BuyModalProps
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: userAddress ? [userAddress] : undefined,
+    chainId,
     query: { enabled: isConnected && contractsReady && !!userAddress },
   });
 
@@ -154,7 +158,7 @@ export default function BuyModal({ contract, onClose, onSuccess }: BuyModalProps
           <div className="bg-[#F2F4F3] rounded-xl px-5 py-4 space-y-2 text-sm">
             {[
               { label: "Contract", value: contract.cropName },
-              { label: "Quantity", value: `${contract.quantityKg.toLocaleString()} kg` },
+              { label: "Quantity", value: `${contract.quantityUnits.toLocaleString()} ${contract.unitType}${contract.unitSizeLbs ? ` (${(contract.quantityUnits * contract.unitSizeLbs).toLocaleString()} lbs)` : ""}` },
               { label: "NFT Token", value: `#${contract.tokenId}` },
               { label: "Network", value: "Base" },
               { label: "Gas Fees", value: "Sponsored by Precrop ✓" },
@@ -188,6 +192,14 @@ export default function BuyModal({ contract, onClose, onSuccess }: BuyModalProps
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700 text-center">
               Contracts not yet deployed to this network.<br />
               <span className="text-xs text-amber-600">Coming soon on Base.</span>
+            </div>
+          )}
+
+          {/* Loading balance */}
+          {isConnected && contractsReady && usdcBalance === undefined && (
+            <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-400">
+              <Loader2 size={16} className="animate-spin" />
+              Checking USDC balance…
             </div>
           )}
 

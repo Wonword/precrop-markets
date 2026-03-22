@@ -80,7 +80,7 @@ export default function NFTCard({
           <div>
             <p className="text-gray-400 font-medium">Quantity</p>
             <p className="font-semibold text-[#333333] mt-0.5">
-              {contract.quantityKg.toLocaleString()} kg
+              {contract.quantityUnits.toLocaleString()} {contract.unitType}
             </p>
           </div>
           <div>

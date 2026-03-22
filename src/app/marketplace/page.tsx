@@ -59,7 +59,7 @@ export default function MarketplacePage() {
         result.sort((a, b) => b.totalValueUsdc - a.totalValueUsdc);
         break;
       case "quantity":
-        result.sort((a, b) => b.quantityKg - a.quantityKg);
+        result.sort((a, b) => b.quantityUnits - a.quantityUnits);
         break;
       default: // newest
         result.sort(

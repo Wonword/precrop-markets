@@ -30,18 +30,32 @@ interface FormData {
   cropCategory: string;
   description: string;
   gradingStandard: string;
+  // Quality Standards
+  qsMoisture: string;
+  qsTotalDefects: string;
+  qsTotalDamaged: string;
+  qsForeignMaterial: string;
+  qsContrasting: string;
+  qsTestWeight: string;
+  qsSpecialMetrics: string;
   // Step 2 — Farm Info
   farmName: string;
   farmerName: string;
+  farmerEmail: string;
+  farmerPhone: string;
   region: string;
   state: string;
   country: string;
   // Step 3 — Contract Terms
-  quantityKg: string;
-  pricePerKgUsdc: string;
+  quantityUnits: string;
+  unitType: string;
+  unitSizeLbs: string;
+  pricePerUnitUsdc: string;
   harvestDate: string;
   deliveryDate: string;
-  // Step 4 — Review
+  deliveryMethod: string;
+  deliveryLocation: string;
+  dockage: string;
 }
 
 const initialForm: FormData = {
@@ -49,15 +63,29 @@ const initialForm: FormData = {
   cropCategory: "grain",
   description: "",
   gradingStandard: "",
+  qsMoisture: "",
+  qsTotalDefects: "",
+  qsTotalDamaged: "",
+  qsForeignMaterial: "",
+  qsContrasting: "",
+  qsTestWeight: "",
+  qsSpecialMetrics: "",
   farmName: "",
   farmerName: "",
+  farmerEmail: "",
+  farmerPhone: "",
   region: "",
   state: "",
   country: "USA",
-  quantityKg: "",
-  pricePerKgUsdc: "",
+  quantityUnits: "",
+  unitType: "Tote Bag",
+  unitSizeLbs: "2000",
+  pricePerUnitUsdc: "",
   harvestDate: "",
   deliveryDate: "",
+  deliveryMethod: "Buyer Provided",
+  deliveryLocation: "Pick-up at Seller's Location",
+  dockage: "Allowed by percentage above any quality standard",
 };
 
 const cropCategories = [
@@ -68,6 +96,16 @@ const cropCategories = [
   { value: "legume", label: "🫘 Legume" },
   { value: "specialty", label: "✨ Specialty" },
 ];
+
+const unitTypes = [
+  { value: "Tote Bag", label: "Tote Bag (2,000 lbs)", sizeLbs: "2000" },
+  { value: "kg", label: "kg (kilograms)", sizeLbs: "" },
+  { value: "lbs", label: "lbs (pounds)", sizeLbs: "" },
+  { value: "Bushel", label: "Bushel", sizeLbs: "" },
+  { value: "Crate", label: "Crate", sizeLbs: "" },
+];
+
+const deliveryMethods = ["Buyer Provided", "Seller Delivered", "Common Carrier"];
 
 const steps = [
   { id: 1, label: "Crop Details", icon: Sprout },
@@ -110,7 +148,7 @@ export default function CreateContractForm() {
   const [minting, setMinting] = useState(false);
   const [minted, setMinted] = useState(false);
   const [mintTxHash, setMintTxHash] = useState<`0x${string}` | undefined>();
-  const [mintedTokenId, setMintedTokenId] = useState<number>(9);
+  const [mintedTokenId, setMintedTokenId] = useState<number>(12);
   const [mintError, setMintError] = useState("");
 
   const set = (field: keyof FormData) => (
@@ -120,19 +158,18 @@ export default function CreateContractForm() {
   ) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const totalUsdc =
-    parseFloat(form.quantityKg || "0") *
-    parseFloat(form.pricePerKgUsdc || "0");
+    parseFloat(form.quantityUnits || "0") *
+    parseFloat(form.pricePerUnitUsdc || "0");
 
   const canNext = () => {
     if (step === 1)
-      return form.cropName && form.description && form.gradingStandard;
+      return form.cropName && form.description;
     if (step === 2)
-      return form.farmName && form.farmerName && form.region && form.state;
+      return form.farmName && form.farmerName && form.state;
     if (step === 3)
       return (
-        form.quantityKg &&
-        form.pricePerKgUsdc &&
-        form.harvestDate &&
+        form.quantityUnits &&
+        form.pricePerUnitUsdc &&
         form.deliveryDate
       );
     return true;
@@ -152,27 +189,34 @@ export default function CreateContractForm() {
     setMintError("");
 
     try {
-      // Build metadata JSON for IPFS
       const metadata = {
         name: form.cropName,
         description: form.description,
         attributes: [
-          { trait_type: "Farm",            value: form.farmName      },
-          { trait_type: "Farmer",          value: form.farmerName    },
-          { trait_type: "Category",        value: form.cropCategory  },
-          { trait_type: "Region",          value: `${form.region}, ${form.state}` },
-          { trait_type: "Country",         value: form.country       },
-          { trait_type: "Quantity (kg)",   value: form.quantityKg    },
-          { trait_type: "Price (USDC/kg)", value: form.pricePerKgUsdc },
-          { trait_type: "Harvest Date",    value: form.harvestDate   },
-          { trait_type: "Delivery Date",   value: form.deliveryDate  },
-          { trait_type: "Grading",         value: form.gradingStandard },
+          { trait_type: "Farm",              value: form.farmName },
+          { trait_type: "Farmer",            value: form.farmerName },
+          { trait_type: "Category",          value: form.cropCategory },
+          { trait_type: "Region",            value: `${form.region}, ${form.state}` },
+          { trait_type: "Country",           value: form.country },
+          { trait_type: "Quantity",          value: `${form.quantityUnits} ${form.unitType}` },
+          { trait_type: "Price per Unit",    value: `${form.pricePerUnitUsdc} USDC/${form.unitType}` },
+          { trait_type: "Delivery Date",     value: form.deliveryDate },
+          { trait_type: "Delivery Method",   value: form.deliveryMethod },
+          { trait_type: "Delivery Location", value: form.deliveryLocation },
+          { trait_type: "Grading Standard",  value: form.gradingStandard },
+          ...(form.qsMoisture        ? [{ trait_type: "Moisture",         value: form.qsMoisture }]        : []),
+          ...(form.qsTotalDefects    ? [{ trait_type: "Total Defects",    value: form.qsTotalDefects }]    : []),
+          ...(form.qsTotalDamaged    ? [{ trait_type: "Total Damaged",    value: form.qsTotalDamaged }]    : []),
+          ...(form.qsForeignMaterial ? [{ trait_type: "Foreign Material", value: form.qsForeignMaterial }] : []),
+          ...(form.qsContrasting     ? [{ trait_type: "Contrasting",      value: form.qsContrasting }]     : []),
+          ...(form.qsTestWeight      ? [{ trait_type: "Test Weight",      value: form.qsTestWeight }]      : []),
+          ...(form.qsSpecialMetrics  ? [{ trait_type: "Special Metrics",  value: form.qsSpecialMetrics }]  : []),
+          ...(form.dockage           ? [{ trait_type: "Dockage",          value: form.dockage }]           : []),
         ],
       };
 
       let metadataURI = `data:application/json,${encodeURIComponent(JSON.stringify(metadata))}`;
 
-      // Upload to IPFS via Pinata API route if configured
       if (process.env.NEXT_PUBLIC_PINATA_ENABLED === "true") {
         const res = await fetch("/api/ipfs/upload", {
           method: "POST",
@@ -186,7 +230,6 @@ export default function CreateContractForm() {
       }
 
       if (!contractsReady) {
-        // Demo mode — skip on-chain tx
         await new Promise((r) => setTimeout(r, 1800));
         setMinting(false);
         setMinted(true);
@@ -201,7 +244,6 @@ export default function CreateContractForm() {
         args: [metadataURI, priceAtoms],
       });
       setMintTxHash(hash);
-      // Wait for receipt — mintTxSuccess effect below sets minted
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Mint failed";
       setMintError(msg.includes("User rejected") ? "Transaction rejected." : msg);
@@ -209,7 +251,6 @@ export default function CreateContractForm() {
     }
   };
 
-  // When tx confirms → show success
   if (mintTxSuccess && minting) {
     setMinting(false);
     setMinted(true);
@@ -347,14 +388,14 @@ export default function CreateContractForm() {
                 Crop Details
               </h2>
               <p className="text-sm text-gray-400 mt-1">
-                Tell buyers what you're growing and why it's special.
+                Tell buyers what you&apos;re growing and why it&apos;s special.
               </p>
             </div>
 
-            <Field label="Crop Name *" hint="Be specific — e.g. 'Heritage Red Fife Wheat'">
+            <Field label="Crop Name *" hint="Include grade — e.g. 'Grain Chickpeas US No. 1'">
               <input
                 type="text"
-                placeholder="e.g. Purple Hull Barley"
+                placeholder="e.g. Grain Hulless Oats US No. 1"
                 value={form.cropName}
                 onChange={set("cropName")}
                 className={inputClass}
@@ -387,8 +428,8 @@ export default function CreateContractForm() {
               hint="Describe your variety, growing practices, and what makes it sought-after."
             >
               <textarea
-                rows={4}
-                placeholder="e.g. Hand-harvested black garlic fermented over 40 days..."
+                rows={3}
+                placeholder="e.g. Hull-less oats grown with intercropping and no pesticides..."
                 value={form.description}
                 onChange={set("description")}
                 className={`${inputClass} resize-none`}
@@ -396,17 +437,54 @@ export default function CreateContractForm() {
             </Field>
 
             <Field
-              label="Grading Standard *"
-              hint="e.g. USDA Organic, Non-GMO Project Verified, GAP Certified"
+              label="Grading Standard"
+              hint="e.g. US No. 1, USDA Organic, Non-GMO Project Verified"
             >
               <input
                 type="text"
-                placeholder="e.g. USDA Certified Organic"
+                placeholder="e.g. US No. 1"
                 value={form.gradingStandard}
                 onChange={set("gradingStandard")}
                 className={inputClass}
               />
             </Field>
+
+            {/* Quality Standards */}
+            <div className="border-t border-gray-100 pt-4 space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-[#333333]">Quality Standards</p>
+                <p className="text-xs text-gray-400 mt-0.5">Specific metrics buyers can hold you to at delivery.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Moisture">
+                  <input type="text" placeholder="e.g. &lt;14%" value={form.qsMoisture} onChange={set("qsMoisture")} className={inputClass} />
+                </Field>
+                <Field label="Total Defects">
+                  <input type="text" placeholder="e.g. &lt;2%" value={form.qsTotalDefects} onChange={set("qsTotalDefects")} className={inputClass} />
+                </Field>
+                <Field label="Total Damaged">
+                  <input type="text" placeholder="e.g. &lt;2%" value={form.qsTotalDamaged} onChange={set("qsTotalDamaged")} className={inputClass} />
+                </Field>
+                <Field label="Foreign Material">
+                  <input type="text" placeholder="e.g. &lt;0.5%" value={form.qsForeignMaterial} onChange={set("qsForeignMaterial")} className={inputClass} />
+                </Field>
+                <Field label="Contrasting (variation)">
+                  <input type="text" placeholder="e.g. &lt;1%" value={form.qsContrasting} onChange={set("qsContrasting")} className={inputClass} />
+                </Field>
+                <Field label="Test Weight">
+                  <input type="text" placeholder="e.g. &gt;55 lbs." value={form.qsTestWeight} onChange={set("qsTestWeight")} className={inputClass} />
+                </Field>
+              </div>
+              <Field label="Special Metrics" hint="Organic practices, certifications, special processing, etc.">
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Grown with intercropping, no pesticides, and soil conservation practices."
+                  value={form.qsSpecialMetrics}
+                  onChange={set("qsSpecialMetrics")}
+                  className={`${inputClass} resize-none`}
+                />
+              </Field>
+            </div>
           </div>
         )}
 
@@ -429,7 +507,7 @@ export default function CreateContractForm() {
               <Field label="Farm Name *">
                 <input
                   type="text"
-                  placeholder="e.g. Sunrise Ridge Farm"
+                  placeholder="e.g. Marias River Farms"
                   value={form.farmName}
                   onChange={set("farmName")}
                   className={inputClass}
@@ -446,10 +524,31 @@ export default function CreateContractForm() {
               </Field>
             </div>
 
-            <Field label="Region / County *" hint="e.g. Willamette Valley, Finger Lakes">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Email">
+                <input
+                  type="email"
+                  placeholder="contact@yourfarm.com"
+                  value={form.farmerEmail}
+                  onChange={set("farmerEmail")}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Phone / Text">
+                <input
+                  type="tel"
+                  placeholder="+1 406-555-0000"
+                  value={form.farmerPhone}
+                  onChange={set("farmerPhone")}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+
+            <Field label="Region / County" hint="e.g. Chester, Willamette Valley, Finger Lakes">
               <input
                 type="text"
-                placeholder="e.g. Hudson Valley"
+                placeholder="e.g. Chester"
                 value={form.region}
                 onChange={set("region")}
                 className={inputClass}
@@ -460,7 +559,7 @@ export default function CreateContractForm() {
               <Field label="State / Province *">
                 <input
                   type="text"
-                  placeholder="e.g. Oregon"
+                  placeholder="e.g. Montana"
                   value={form.state}
                   onChange={set("state")}
                   className={inputClass}
@@ -502,29 +601,51 @@ export default function CreateContractForm() {
                 Contract Terms
               </h2>
               <p className="text-sm text-gray-400 mt-1">
-                Set the quantity, price, and key dates for your contract.
+                Set the quantity, unit, price, and delivery details.
               </p>
             </div>
 
+            {/* Unit type */}
+            <Field label="Unit Type *" hint="How is your crop measured and sold?">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {unitTypes.map(({ value, label, sizeLbs }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() =>
+                      setForm((p) => ({ ...p, unitType: value, unitSizeLbs: sizeLbs }))
+                    }
+                    className={`py-2 px-3 rounded-xl text-sm border transition-all text-left ${
+                      form.unitType === value
+                        ? "bg-[#1B5E55] text-white border-[#1B5E55]"
+                        : "border-gray-200 text-gray-600 hover:border-[#1B5E55] hover:text-[#1B5E55]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Quantity (kg) *" hint="Total harvest you're committing to">
+              <Field label={`Quantity (${form.unitType}s) *`} hint="Number of units you're committing">
                 <input
                   type="number"
                   min="1"
-                  placeholder="e.g. 500"
-                  value={form.quantityKg}
-                  onChange={set("quantityKg")}
+                  placeholder="e.g. 10"
+                  value={form.quantityUnits}
+                  onChange={set("quantityUnits")}
                   className={inputClass}
                 />
               </Field>
-              <Field label="Price per kg (USDC) *" hint="You receive this at delivery">
+              <Field label={`Price per ${form.unitType} (USDC) *`} hint="You receive this at delivery">
                 <input
                   type="number"
                   min="0.01"
                   step="0.01"
-                  placeholder="e.g. 2.50"
-                  value={form.pricePerKgUsdc}
-                  onChange={set("pricePerKgUsdc")}
+                  placeholder="e.g. 100"
+                  value={form.pricePerUnitUsdc}
+                  onChange={set("pricePerUnitUsdc")}
                   className={inputClass}
                 />
               </Field>
@@ -533,27 +654,26 @@ export default function CreateContractForm() {
             {/* Live total */}
             {totalUsdc > 0 && (
               <div className="bg-[#88C057]/10 border border-[#88C057]/20 rounded-xl px-5 py-4 flex items-center justify-between">
-                <span className="text-sm text-[#1B5E55] font-medium">
-                  Total Contract Value
-                </span>
+                <div>
+                  <span className="text-sm text-[#1B5E55] font-medium">Total Contract Value</span>
+                  {form.unitSizeLbs && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {(parseFloat(form.quantityUnits || "0") * parseFloat(form.unitSizeLbs)).toLocaleString()} lbs total
+                    </p>
+                  )}
+                </div>
                 <span
                   className="text-2xl font-bold text-[#1B5E55]"
-                  style={{
-                    fontFamily: "var(--font-space-grotesk, sans-serif)",
-                  }}
+                  style={{ fontFamily: "var(--font-space-grotesk, sans-serif)" }}
                 >
-                  {totalUsdc.toLocaleString(undefined, {
-                    maximumFractionDigits: 2,
-                  })}{" "}
-                  <span className="text-base font-normal text-gray-400">
-                    USDC
-                  </span>
+                  {totalUsdc.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+                  <span className="text-base font-normal text-gray-400">USDC</span>
                 </span>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Expected Harvest Date *">
+              <Field label="Expected Harvest Date">
                 <input
                   type="date"
                   value={form.harvestDate}
@@ -562,12 +682,53 @@ export default function CreateContractForm() {
                   className={inputClass}
                 />
               </Field>
-              <Field label="Delivery Date *" hint="When buyers receive the crop">
+              <Field label="Earliest Delivery Date *">
                 <input
                   type="date"
                   value={form.deliveryDate}
                   onChange={set("deliveryDate")}
                   min={form.harvestDate || new Date().toISOString().split("T")[0]}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+
+            {/* Delivery */}
+            <div className="border-t border-gray-100 pt-4 space-y-4">
+              <p className="text-sm font-semibold text-[#333333]">Delivery</p>
+              <Field label="Delivery Method">
+                <div className="flex flex-wrap gap-2">
+                  {deliveryMethods.map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, deliveryMethod: method }))}
+                      className={`py-2 px-4 rounded-xl text-sm border transition-all ${
+                        form.deliveryMethod === method
+                          ? "bg-[#1B5E55] text-white border-[#1B5E55]"
+                          : "border-gray-200 text-gray-600 hover:border-[#1B5E55] hover:text-[#1B5E55]"
+                      }`}
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Pickup / Delivery Location">
+                <input
+                  type="text"
+                  placeholder="e.g. Pick-up at Seller's Location"
+                  value={form.deliveryLocation}
+                  onChange={set("deliveryLocation")}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Dockage" hint="How quality shortfalls are handled">
+                <input
+                  type="text"
+                  placeholder="e.g. Allowed by percentage above any quality standard"
+                  value={form.dockage}
+                  onChange={set("dockage")}
                   className={inputClass}
                 />
               </Field>
@@ -599,14 +760,19 @@ export default function CreateContractForm() {
               </p>
             </div>
 
-            {/* Summary cards */}
             {[
               {
                 title: "Crop Details",
                 items: [
                   { label: "Crop", value: form.cropName },
                   { label: "Category", value: form.cropCategory },
-                  { label: "Grading", value: form.gradingStandard },
+                  ...(form.gradingStandard ? [{ label: "Grading", value: form.gradingStandard }] : []),
+                  ...(form.qsMoisture ? [{ label: "Moisture", value: form.qsMoisture }] : []),
+                  ...(form.qsTotalDefects ? [{ label: "Total Defects", value: form.qsTotalDefects }] : []),
+                  ...(form.qsTotalDamaged ? [{ label: "Total Damaged", value: form.qsTotalDamaged }] : []),
+                  ...(form.qsForeignMaterial ? [{ label: "Foreign Material", value: form.qsForeignMaterial }] : []),
+                  ...(form.qsContrasting ? [{ label: "Contrasting", value: form.qsContrasting }] : []),
+                  ...(form.qsTestWeight ? [{ label: "Test Weight", value: form.qsTestWeight }] : []),
                 ],
               },
               {
@@ -614,27 +780,22 @@ export default function CreateContractForm() {
                 items: [
                   { label: "Farm", value: form.farmName },
                   { label: "Farmer", value: form.farmerName },
-                  {
-                    label: "Location",
-                    value: `${form.region}, ${form.state}, ${form.country}`,
-                  },
+                  { label: "Location", value: [form.region, form.state, form.country].filter(Boolean).join(", ") },
+                  ...(form.farmerEmail ? [{ label: "Email", value: form.farmerEmail }] : []),
+                  ...(form.farmerPhone ? [{ label: "Phone", value: form.farmerPhone }] : []),
                 ],
               },
               {
                 title: "Contract Terms",
                 items: [
-                  { label: "Quantity", value: `${form.quantityKg} kg` },
-                  {
-                    label: "Price",
-                    value: `${form.pricePerKgUsdc} USDC/kg`,
-                  },
-                  {
-                    label: "Total Value",
-                    value: `${totalUsdc.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC`,
-                    highlight: true,
-                  },
-                  { label: "Harvest", value: form.harvestDate },
+                  { label: "Quantity", value: `${form.quantityUnits} ${form.unitType}${form.unitSizeLbs ? `s (${(parseFloat(form.quantityUnits||"0") * parseFloat(form.unitSizeLbs)).toLocaleString()} lbs)` : ""}` },
+                  { label: "Price", value: `${form.pricePerUnitUsdc} USDC/${form.unitType}` },
+                  { label: "Total Value", value: `${totalUsdc.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC`, highlight: true },
+                  ...(form.harvestDate ? [{ label: "Harvest", value: form.harvestDate }] : []),
                   { label: "Delivery", value: form.deliveryDate },
+                  { label: "Method", value: form.deliveryMethod },
+                  { label: "Location", value: form.deliveryLocation },
+                  ...(form.dockage ? [{ label: "Dockage", value: form.dockage }] : []),
                 ],
               },
             ].map(({ title, items }) => (
@@ -646,7 +807,7 @@ export default function CreateContractForm() {
                   <div key={label} className="flex justify-between text-sm">
                     <span className="text-gray-400">{label}</span>
                     <span
-                      className={`font-medium ${
+                      className={`font-medium text-right max-w-[60%] ${
                         highlight ? "text-[#1B5E55] font-bold" : "text-[#333333]"
                       }`}
                     >
@@ -657,7 +818,6 @@ export default function CreateContractForm() {
               </div>
             ))}
 
-            {/* Mint details */}
             <div className="border border-[#1B5E55]/15 rounded-xl p-5 space-y-2.5">
               <p className="text-xs font-semibold uppercase tracking-widest text-[#1B5E55]/50">
                 On-Chain Details
