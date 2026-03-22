@@ -26,11 +26,15 @@ import type {
 export interface PrecropMarketInterface extends Interface {
   getFunction(
     nameOrSignature:
-      | "FARMER_ROYALTY_BPS"
+      | "FARMER_ERC2981_BPS"
       | "buy"
+      | "buySecondary"
       | "cancelListing"
+      | "cancelSecondaryListing"
+      | "farmerSecondaryRoyaltyBps"
       | "feeRecipient"
       | "getListing"
+      | "getSecondaryListing"
       | "listings"
       | "mintAndList"
       | "nftContract"
@@ -38,7 +42,10 @@ export interface PrecropMarketInterface extends Interface {
       | "owner"
       | "platformFeeBps"
       | "redeem"
+      | "relist"
       | "renounceOwnership"
+      | "secondaryListings"
+      | "setFarmerSecondaryRoyalty"
       | "setFeeRecipient"
       | "setPlatformFee"
       | "transferOwnership"
@@ -50,20 +57,36 @@ export interface PrecropMarketInterface extends Interface {
       | "ContractMinted"
       | "ContractPurchased"
       | "ContractRedeemed"
+      | "FarmerSecondaryRoyaltyUpdated"
       | "FeeRecipientUpdated"
       | "ListingCancelled"
       | "OwnershipTransferred"
       | "PlatformFeeUpdated"
+      | "SecondaryListed"
+      | "SecondaryListingCancelled"
+      | "SecondaryPurchased"
   ): EventFragment;
 
   encodeFunctionData(
-    functionFragment: "FARMER_ROYALTY_BPS",
+    functionFragment: "FARMER_ERC2981_BPS",
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "buy", values: [BigNumberish]): string;
   encodeFunctionData(
+    functionFragment: "buySecondary",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "cancelListing",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "cancelSecondaryListing",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "farmerSecondaryRoyaltyBps",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "feeRecipient",
@@ -71,6 +94,10 @@ export interface PrecropMarketInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getListing",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getSecondaryListing",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -99,8 +126,20 @@ export interface PrecropMarketInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "relist",
+    values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "secondaryListings",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setFarmerSecondaryRoyalty",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "setFeeRecipient",
@@ -117,12 +156,24 @@ export interface PrecropMarketInterface extends Interface {
   encodeFunctionData(functionFragment: "usdc", values?: undefined): string;
 
   decodeFunctionResult(
-    functionFragment: "FARMER_ROYALTY_BPS",
+    functionFragment: "FARMER_ERC2981_BPS",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "buy", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "buySecondary",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "cancelListing",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "cancelSecondaryListing",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "farmerSecondaryRoyaltyBps",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -130,6 +181,10 @@ export interface PrecropMarketInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "getListing", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getSecondaryListing",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "listings", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "mintAndList",
@@ -149,8 +204,17 @@ export interface PrecropMarketInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "redeem", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "relist", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "secondaryListings",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setFarmerSecondaryRoyalty",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -224,6 +288,18 @@ export namespace ContractRedeemedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace FarmerSecondaryRoyaltyUpdatedEvent {
+  export type InputTuple = [newBps: BigNumberish];
+  export type OutputTuple = [newBps: bigint];
+  export interface OutputObject {
+    newBps: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace FeeRecipientUpdatedEvent {
   export type InputTuple = [newRecipient: AddressLike];
   export type OutputTuple = [newRecipient: string];
@@ -266,6 +342,71 @@ export namespace PlatformFeeUpdatedEvent {
   export type OutputTuple = [newFeeBps: bigint];
   export interface OutputObject {
     newFeeBps: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace SecondaryListedEvent {
+  export type InputTuple = [
+    tokenId: BigNumberish,
+    seller: AddressLike,
+    priceUsdc: BigNumberish
+  ];
+  export type OutputTuple = [
+    tokenId: bigint,
+    seller: string,
+    priceUsdc: bigint
+  ];
+  export interface OutputObject {
+    tokenId: bigint;
+    seller: string;
+    priceUsdc: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace SecondaryListingCancelledEvent {
+  export type InputTuple = [tokenId: BigNumberish];
+  export type OutputTuple = [tokenId: bigint];
+  export interface OutputObject {
+    tokenId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace SecondaryPurchasedEvent {
+  export type InputTuple = [
+    tokenId: BigNumberish,
+    buyer: AddressLike,
+    priceUsdc: BigNumberish,
+    farmer: AddressLike,
+    farmerRoyalty: BigNumberish,
+    platformFee: BigNumberish
+  ];
+  export type OutputTuple = [
+    tokenId: bigint,
+    buyer: string,
+    priceUsdc: bigint,
+    farmer: string,
+    farmerRoyalty: bigint,
+    platformFee: bigint
+  ];
+  export interface OutputObject {
+    tokenId: bigint;
+    buyer: string;
+    priceUsdc: bigint;
+    farmer: string;
+    farmerRoyalty: bigint;
+    platformFee: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -316,15 +457,29 @@ export interface PrecropMarket extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  FARMER_ROYALTY_BPS: TypedContractMethod<[], [bigint], "view">;
+  FARMER_ERC2981_BPS: TypedContractMethod<[], [bigint], "view">;
 
   buy: TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
+
+  buySecondary: TypedContractMethod<
+    [tokenId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
 
   cancelListing: TypedContractMethod<
     [tokenId: BigNumberish],
     [void],
     "nonpayable"
   >;
+
+  cancelSecondaryListing: TypedContractMethod<
+    [tokenId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  farmerSecondaryRoyaltyBps: TypedContractMethod<[], [bigint], "view">;
 
   feeRecipient: TypedContractMethod<[], [string], "view">;
 
@@ -333,6 +488,18 @@ export interface PrecropMarket extends BaseContract {
     [
       [string, bigint, boolean] & {
         farmer: string;
+        priceUsdc: bigint;
+        active: boolean;
+      }
+    ],
+    "view"
+  >;
+
+  getSecondaryListing: TypedContractMethod<
+    [tokenId: BigNumberish],
+    [
+      [string, bigint, boolean] & {
+        seller: string;
         priceUsdc: bigint;
         active: boolean;
       }
@@ -372,7 +539,31 @@ export interface PrecropMarket extends BaseContract {
 
   redeem: TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
 
+  relist: TypedContractMethod<
+    [tokenId: BigNumberish, priceUsdc: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
+
+  secondaryListings: TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [string, bigint, boolean] & {
+        seller: string;
+        priceUsdc: bigint;
+        active: boolean;
+      }
+    ],
+    "view"
+  >;
+
+  setFarmerSecondaryRoyalty: TypedContractMethod<
+    [_bps: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
 
   setFeeRecipient: TypedContractMethod<
     [_feeRecipient: AddressLike],
@@ -399,14 +590,23 @@ export interface PrecropMarket extends BaseContract {
   ): T;
 
   getFunction(
-    nameOrSignature: "FARMER_ROYALTY_BPS"
+    nameOrSignature: "FARMER_ERC2981_BPS"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "buy"
   ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "buySecondary"
+  ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "cancelListing"
   ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "cancelSecondaryListing"
+  ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "farmerSecondaryRoyaltyBps"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "feeRecipient"
   ): TypedContractMethod<[], [string], "view">;
@@ -417,6 +617,19 @@ export interface PrecropMarket extends BaseContract {
     [
       [string, bigint, boolean] & {
         farmer: string;
+        priceUsdc: bigint;
+        active: boolean;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "getSecondaryListing"
+  ): TypedContractMethod<
+    [tokenId: BigNumberish],
+    [
+      [string, bigint, boolean] & {
+        seller: string;
         priceUsdc: bigint;
         active: boolean;
       }
@@ -463,8 +676,31 @@ export interface PrecropMarket extends BaseContract {
     nameOrSignature: "redeem"
   ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "relist"
+  ): TypedContractMethod<
+    [tokenId: BigNumberish, priceUsdc: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "secondaryListings"
+  ): TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [string, bigint, boolean] & {
+        seller: string;
+        priceUsdc: bigint;
+        active: boolean;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "setFarmerSecondaryRoyalty"
+  ): TypedContractMethod<[_bps: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "setFeeRecipient"
   ): TypedContractMethod<[_feeRecipient: AddressLike], [void], "nonpayable">;
@@ -500,6 +736,13 @@ export interface PrecropMarket extends BaseContract {
     ContractRedeemedEvent.OutputObject
   >;
   getEvent(
+    key: "FarmerSecondaryRoyaltyUpdated"
+  ): TypedContractEvent<
+    FarmerSecondaryRoyaltyUpdatedEvent.InputTuple,
+    FarmerSecondaryRoyaltyUpdatedEvent.OutputTuple,
+    FarmerSecondaryRoyaltyUpdatedEvent.OutputObject
+  >;
+  getEvent(
     key: "FeeRecipientUpdated"
   ): TypedContractEvent<
     FeeRecipientUpdatedEvent.InputTuple,
@@ -526,6 +769,27 @@ export interface PrecropMarket extends BaseContract {
     PlatformFeeUpdatedEvent.InputTuple,
     PlatformFeeUpdatedEvent.OutputTuple,
     PlatformFeeUpdatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "SecondaryListed"
+  ): TypedContractEvent<
+    SecondaryListedEvent.InputTuple,
+    SecondaryListedEvent.OutputTuple,
+    SecondaryListedEvent.OutputObject
+  >;
+  getEvent(
+    key: "SecondaryListingCancelled"
+  ): TypedContractEvent<
+    SecondaryListingCancelledEvent.InputTuple,
+    SecondaryListingCancelledEvent.OutputTuple,
+    SecondaryListingCancelledEvent.OutputObject
+  >;
+  getEvent(
+    key: "SecondaryPurchased"
+  ): TypedContractEvent<
+    SecondaryPurchasedEvent.InputTuple,
+    SecondaryPurchasedEvent.OutputTuple,
+    SecondaryPurchasedEvent.OutputObject
   >;
 
   filters: {
@@ -560,6 +824,17 @@ export interface PrecropMarket extends BaseContract {
       ContractRedeemedEvent.InputTuple,
       ContractRedeemedEvent.OutputTuple,
       ContractRedeemedEvent.OutputObject
+    >;
+
+    "FarmerSecondaryRoyaltyUpdated(uint256)": TypedContractEvent<
+      FarmerSecondaryRoyaltyUpdatedEvent.InputTuple,
+      FarmerSecondaryRoyaltyUpdatedEvent.OutputTuple,
+      FarmerSecondaryRoyaltyUpdatedEvent.OutputObject
+    >;
+    FarmerSecondaryRoyaltyUpdated: TypedContractEvent<
+      FarmerSecondaryRoyaltyUpdatedEvent.InputTuple,
+      FarmerSecondaryRoyaltyUpdatedEvent.OutputTuple,
+      FarmerSecondaryRoyaltyUpdatedEvent.OutputObject
     >;
 
     "FeeRecipientUpdated(address)": TypedContractEvent<
@@ -604,6 +879,39 @@ export interface PrecropMarket extends BaseContract {
       PlatformFeeUpdatedEvent.InputTuple,
       PlatformFeeUpdatedEvent.OutputTuple,
       PlatformFeeUpdatedEvent.OutputObject
+    >;
+
+    "SecondaryListed(uint256,address,uint256)": TypedContractEvent<
+      SecondaryListedEvent.InputTuple,
+      SecondaryListedEvent.OutputTuple,
+      SecondaryListedEvent.OutputObject
+    >;
+    SecondaryListed: TypedContractEvent<
+      SecondaryListedEvent.InputTuple,
+      SecondaryListedEvent.OutputTuple,
+      SecondaryListedEvent.OutputObject
+    >;
+
+    "SecondaryListingCancelled(uint256)": TypedContractEvent<
+      SecondaryListingCancelledEvent.InputTuple,
+      SecondaryListingCancelledEvent.OutputTuple,
+      SecondaryListingCancelledEvent.OutputObject
+    >;
+    SecondaryListingCancelled: TypedContractEvent<
+      SecondaryListingCancelledEvent.InputTuple,
+      SecondaryListingCancelledEvent.OutputTuple,
+      SecondaryListingCancelledEvent.OutputObject
+    >;
+
+    "SecondaryPurchased(uint256,address,uint256,address,uint256,uint256)": TypedContractEvent<
+      SecondaryPurchasedEvent.InputTuple,
+      SecondaryPurchasedEvent.OutputTuple,
+      SecondaryPurchasedEvent.OutputObject
+    >;
+    SecondaryPurchased: TypedContractEvent<
+      SecondaryPurchasedEvent.InputTuple,
+      SecondaryPurchasedEvent.OutputTuple,
+      SecondaryPurchasedEvent.OutputObject
     >;
   };
 }

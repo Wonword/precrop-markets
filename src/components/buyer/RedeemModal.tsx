@@ -10,7 +10,7 @@ interface RedeemModalProps {
   contract: CropContract;
   paidUsdc: number;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (result: { deliveryAddress: string; txHash?: string }) => void;
 }
 
 const steps = ["Delivery Details", "Confirm & Sign", "Done"];
@@ -333,7 +333,10 @@ export default function RedeemModal({
               </div>
               {redeemTxHash && <TxLink hash={redeemTxHash} />}
               <button
-                onClick={onSuccess}
+                onClick={() => onSuccess({
+                  deliveryAddress: `${address}, ${city} ${zip}, ${country}`,
+                  txHash: redeemTxHash,
+                })}
                 className="w-full bg-[#1B5E55] hover:bg-[#143f39] text-white font-semibold py-3 rounded-xl transition-colors text-sm"
               >
                 Back to Portfolio

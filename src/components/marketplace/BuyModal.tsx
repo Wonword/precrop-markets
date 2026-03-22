@@ -12,6 +12,7 @@ import {
   toUsdcAtoms,
 } from "@/lib/web3/contracts";
 import { CropContract } from "@/types/contract";
+import { createClient } from "@/lib/supabase/client";
 
 interface BuyModalProps {
   contract: CropContract;
@@ -91,12 +92,25 @@ export default function BuyModal({ contract, onClose, onSuccess }: BuyModalProps
     }
   }, [approveSuccess, step, refetchAllowance]);
 
-  // When buy confirms → success
+  // When buy confirms → save to Supabase + success
   useEffect(() => {
     if (buySuccess && step === "buying") {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return;
+        supabase.from("purchases").insert({
+          contract_id: contract.id,
+          buyer_id: user.id,
+          paid_usdc: contract.totalValueUsdc,
+          tx_hash: buyTxHash ?? null,
+        }).then(() => {
+          // Also mark contract as sold
+          supabase.from("contracts").update({ status: "sold" }).eq("id", contract.id);
+        });
+      });
       setStep("success");
     }
-  }, [buySuccess, step]);
+  }, [buySuccess, step, contract.id, contract.totalValueUsdc, buyTxHash]);
 
   const handleApprove = async () => {
     try {
