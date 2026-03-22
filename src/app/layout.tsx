@@ -17,6 +17,10 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
   title: "Precrop Markets — Where Transparency Grows.",
   description:
     "Precrop Markets is the first platform where independent farmers create micro-futures contracts as NFTs, giving buyers direct access to future harvests while funding farmers at planting time.",
