@@ -1,44 +1,44 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import {
-  Clock,
-  ArrowUpRight,
-  PackageCheck,
-  ShoppingBag,
-  Loader2,
-  Search,
-  Wallet,
-} from "lucide-react";
-import { useAccount } from "wagmi";
-import { createPublicClient, http, parseAbiItem } from "viem";
-import { base, baseSepolia } from "wagmi/chains";
-import { CONTRACT_ADDRESSES, NFT_ABI, contractsReady, fromUsdcAtoms } from "@/lib/web3/contracts";
-
-type EventType = "purchase" | "redeem";
+import { Clock, ArrowUpRight, PackageCheck, ShoppingBag, Loader2, Search } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { createClient } from "@/lib/supabase/client";
 
 type HistoryEvent = {
   id: string;
-  type: EventType;
-  tokenId: bigint;
-  amountUsdc: string;
-  txHash: `0x${string}`;
-  blockNumber: bigint;
-  timestamp?: number; // unix seconds
-  cropName?: string;
+  type: "purchase" | "redeem";
+  contractId: string;
+  cropName: string;
+  farmName: string;
+  region: string;
+  quantityUnits: number;
+  unitType: string;
+  amountUsdc: number;
+  txHash?: string;
+  date: string;
+  deliveryAddress?: string;
   imageUrl?: string;
+  placeholderGradient: string;
 };
 
-const PURCHASED_EVENT = parseAbiItem(
-  "event ContractPurchased(uint256 indexed tokenId, address indexed buyer, uint256 priceUsdc)"
-);
-const REDEEMED_EVENT = parseAbiItem(
-  "event ContractRedeemed(uint256 indexed tokenId, address indexed buyer)"
-);
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
-function TxLink({ hash }: { hash: `0x${string}` }) {
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
+function formatUsdc(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function TxLink({ hash, chainId }: { hash: string; chainId: number }) {
   const base = chainId === 8453 ? "https://basescan.org/tx/" : "https://sepolia.basescan.org/tx/";
   return (
     <a
@@ -53,168 +53,91 @@ function TxLink({ hash }: { hash: `0x${string}` }) {
   );
 }
 
-function formatDate(timestamp?: number) {
-  if (!timestamp) return null;
-  return new Date(timestamp * 1000).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function BuyerHistoryPage() {
-  const { address, isConnected } = useAccount();
+  const { user, loading: authLoading } = useAuth();
+  const [events, setEvents] = useState<HistoryEvent[]>([]);
+  const [loading, setLoading] = useState(true);
   const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
 
-  // Use the public (non-Alchemy) RPC for getLogs — Alchemy free tier caps at 10 blocks
-  const logsClient = createPublicClient({
-    chain: chainId === 8453 ? base : baseSepolia,
-    transport: http(chainId === 8453 ? "https://mainnet.base.org" : "https://sepolia.base.org"),
-  });
+  const fetchHistory = useCallback(async () => {
+    if (!user?.id) return;
+    const supabase = createClient();
 
-  const [events, setEvents] = useState<HistoryEvent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+    const { data, error } = await supabase
+      .from("purchases")
+      .select("*, contracts(*, farms(farm_name, contact_name, region, state))")
+      .eq("buyer_id", user.id)
+      .order("purchased_at", { ascending: false });
+
+    if (error || !data) {
+      setLoading(false);
+      return;
+    }
+
+    const rows = data as unknown as Array<Record<string, unknown>>;
+    const result: HistoryEvent[] = [];
+
+    for (const row of rows) {
+      const c = row.contracts as Record<string, unknown> | null;
+      const farm = (c?.farms as Record<string, unknown> | null) ?? {};
+      const gradient = String(c?.placeholder_gradient ?? "from-[#1B5E55] to-[#88C057]");
+
+      // Purchase event
+      result.push({
+        id: `purchase-${row.id}`,
+        type: "purchase",
+        contractId: String(c?.id ?? row.contract_id ?? ""),
+        cropName: String(c?.crop_name ?? "Contract"),
+        farmName: String(farm.farm_name ?? "Unknown Farm"),
+        region: String(farm.region ?? ""),
+        quantityUnits: Number(c?.quantity_units ?? 0),
+        unitType: String(c?.unit_type ?? "units"),
+        amountUsdc: Number(row.paid_usdc ?? 0),
+        txHash: row.tx_hash ? String(row.tx_hash) : undefined,
+        date: String(row.purchased_at ?? ""),
+        imageUrl: c?.image_url ? String(c.image_url) : undefined,
+        placeholderGradient: gradient,
+      });
+
+      // Redeem event (if redeemed)
+      if (row.redeemed_at) {
+        result.push({
+          id: `redeem-${row.id}`,
+          type: "redeem",
+          contractId: String(c?.id ?? row.contract_id ?? ""),
+          cropName: String(c?.crop_name ?? "Contract"),
+          farmName: String(farm.farm_name ?? "Unknown Farm"),
+          region: String(farm.region ?? ""),
+          quantityUnits: Number(c?.quantity_units ?? 0),
+          unitType: String(c?.unit_type ?? "units"),
+          amountUsdc: Number(row.paid_usdc ?? 0),
+          txHash: row.redeem_tx_hash ? String(row.redeem_tx_hash) : undefined,
+          date: String(row.redeemed_at),
+          deliveryAddress: row.delivery_address ? String(row.delivery_address) : undefined,
+          imageUrl: c?.image_url ? String(c.image_url) : undefined,
+          placeholderGradient: gradient,
+        });
+      }
+    }
+
+    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setEvents(result);
+    setLoading(false);
+  }, [user?.id]);
 
   useEffect(() => {
-    if (!address || !contractsReady) return;
+    if (authLoading) return;
+    if (!user?.id) { setLoading(false); return; }
+    fetchHistory();
+  }, [user, authLoading, fetchHistory]);
 
-    setLoading(true);
-    setError(null);
-
-    const loadHistory = async () => {
-      try {
-        // Fetch purchase and redeem logs in parallel
-        const [purchaseLogs, redeemLogs] = await Promise.all([
-          logsClient.getLogs({
-            address: CONTRACT_ADDRESSES.market,
-            event: PURCHASED_EVENT,
-            args: { buyer: address },
-            fromBlock: BigInt(0),
-          }),
-          logsClient.getLogs({
-            address: CONTRACT_ADDRESSES.market,
-            event: REDEEMED_EVENT,
-            args: { buyer: address },
-            fromBlock: BigInt(0),
-          }),
-        ]);
-
-        // Collect unique token IDs to fetch metadata
-        const tokenIds = new Set<bigint>();
-        purchaseLogs.forEach((l) => l.args.tokenId !== undefined && tokenIds.add(l.args.tokenId));
-        redeemLogs.forEach((l) => l.args.tokenId !== undefined && tokenIds.add(l.args.tokenId));
-
-        // Fetch tokenURI for each token
-        const metaMap = new Map<string, { cropName?: string; imageUrl?: string }>();
-        await Promise.allSettled(
-          Array.from(tokenIds).map(async (tokenId) => {
-            try {
-              const uri = await logsClient.readContract({
-                address: CONTRACT_ADDRESSES.nft,
-                abi: NFT_ABI,
-                functionName: "tokenURI",
-                args: [tokenId],
-              });
-              if (!uri) return;
-              // Handle IPFS or HTTP URIs
-              const url = uri.startsWith("ipfs://")
-                ? uri.replace("ipfs://", "https://ipfs.io/ipfs/")
-                : uri;
-              const res = await globalThis.fetch(url);
-              if (!res.ok) return;
-              const json = await res.json();
-              metaMap.set(tokenId.toString(), {
-                cropName: json.name ?? json.cropName ?? undefined,
-                imageUrl: json.image ?? json.imageUrl ?? undefined,
-              });
-            } catch {
-              // metadata unavailable — show token ID only
-            }
-          })
-        );
-
-        // Fetch block timestamps for all unique blocks
-        const blockNums = new Set<bigint>();
-        [...purchaseLogs, ...redeemLogs].forEach((l) => {
-          if (l.blockNumber) blockNums.add(l.blockNumber);
-        });
-        const blockTimestamps = new Map<string, number>();
-        await Promise.allSettled(
-          Array.from(blockNums).map(async (bn) => {
-            try {
-              const block = await logsClient.getBlock({ blockNumber: bn });
-              blockTimestamps.set(bn.toString(), Number(block.timestamp));
-            } catch {
-              // timestamp unavailable
-            }
-          })
-        );
-
-        // Build event list
-        const result: HistoryEvent[] = [];
-
-        for (const log of purchaseLogs) {
-          const { tokenId, priceUsdc } = log.args;
-          if (tokenId === undefined) continue;
-          const meta = metaMap.get(tokenId.toString()) ?? {};
-          result.push({
-            id: `purchase-${log.transactionHash}-${tokenId}`,
-            type: "purchase",
-            tokenId,
-            amountUsdc: priceUsdc !== undefined ? fromUsdcAtoms(priceUsdc) : "—",
-            txHash: log.transactionHash,
-            blockNumber: log.blockNumber ?? BigInt(0),
-            timestamp: log.blockNumber
-              ? blockTimestamps.get(log.blockNumber.toString())
-              : undefined,
-            cropName: meta.cropName,
-            imageUrl: meta.imageUrl,
-          });
-        }
-
-        for (const log of redeemLogs) {
-          const { tokenId } = log.args;
-          if (tokenId === undefined) continue;
-          const meta = metaMap.get(tokenId.toString()) ?? {};
-          // Find the original purchase price for display
-          const purchaseLog = purchaseLogs.find((p) => p.args.tokenId === tokenId);
-          const amountUsdc =
-            purchaseLog?.args.priceUsdc !== undefined
-              ? fromUsdcAtoms(purchaseLog.args.priceUsdc)
-              : "—";
-          result.push({
-            id: `redeem-${log.transactionHash}-${tokenId}`,
-            type: "redeem",
-            tokenId,
-            amountUsdc,
-            txHash: log.transactionHash,
-            blockNumber: log.blockNumber ?? BigInt(0),
-            timestamp: log.blockNumber
-              ? blockTimestamps.get(log.blockNumber.toString())
-              : undefined,
-            cropName: meta.cropName,
-            imageUrl: meta.imageUrl,
-          });
-        }
-
-        // Sort newest first
-        result.sort((a, b) => {
-          if (a.timestamp && b.timestamp) return b.timestamp - a.timestamp;
-          return Number(b.blockNumber - a.blockNumber);
-        });
-
-        setEvents(result);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load history");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadHistory();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address, chainId]);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 size={24} className="animate-spin text-[#1B5E55]" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -230,11 +153,9 @@ export default function BuyerHistoryPage() {
           >
             Transaction History
           </h1>
-          {!loading && isConnected && (
-            <p className="text-gray-500 text-sm mt-1">
-              {events.length} event{events.length !== 1 ? "s" : ""}
-            </p>
-          )}
+          <p className="text-gray-500 text-sm mt-1">
+            {events.length} event{events.length !== 1 ? "s" : ""}
+          </p>
         </div>
         <Link
           href="/marketplace"
@@ -245,40 +166,11 @@ export default function BuyerHistoryPage() {
         </Link>
       </div>
 
-      {/* Wallet not connected */}
-      {!isConnected && (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center space-y-3">
-          <Wallet size={32} className="text-[#ADC2B5] mx-auto" />
-          <p className="text-gray-500 text-sm">Connect your wallet to view your transaction history.</p>
-        </div>
-      )}
-
-      {/* Contracts not deployed */}
-      {isConnected && !contractsReady && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-700 text-center">
-          Contracts not yet deployed to this network.
-        </div>
-      )}
-
-      {/* Loading */}
-      {isConnected && contractsReady && loading && (
-        <div className="flex items-center justify-center py-32">
-          <Loader2 size={24} className="animate-spin text-[#1B5E55]" />
-        </div>
-      )}
-
-      {/* Error */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-sm text-red-600">
-          {error}
-        </div>
-      )}
-
       {/* Empty */}
-      {isConnected && contractsReady && !loading && !error && events.length === 0 && (
+      {events.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
           <Clock size={32} className="text-[#ADC2B5] mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">No transactions found for this wallet.</p>
+          <p className="text-gray-400 text-sm">No transactions yet.</p>
           <Link
             href="/marketplace"
             className="inline-block mt-4 text-sm font-semibold text-[#1B5E55] hover:underline"
@@ -286,10 +178,7 @@ export default function BuyerHistoryPage() {
             Browse available contracts →
           </Link>
         </div>
-      )}
-
-      {/* Timeline */}
-      {!loading && events.length > 0 && (
+      ) : (
         <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
           {events.map((event) => (
             <div
@@ -314,11 +203,13 @@ export default function BuyerHistoryPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={event.imageUrl}
-                  alt={event.cropName ?? `Token #${event.tokenId}`}
+                  alt={event.cropName}
                   className="hidden sm:block w-12 h-12 rounded-lg object-cover shrink-0"
                 />
               ) : (
-                <div className="hidden sm:block w-12 h-12 rounded-lg bg-gradient-to-br from-[#1B5E55] to-[#88C057] shrink-0" />
+                <div
+                  className={`hidden sm:block w-12 h-12 rounded-lg bg-gradient-to-br ${event.placeholderGradient} shrink-0`}
+                />
               )}
 
               {/* Details */}
@@ -327,25 +218,33 @@ export default function BuyerHistoryPage() {
                   <div>
                     <p className="font-semibold text-[#1B5E55] text-sm leading-tight">
                       {event.type === "purchase" ? "Purchased" : "Redeemed"}{" "}
-                      <span className="font-bold">
-                        {event.cropName ?? `Token #${event.tokenId}`}
-                      </span>
+                      <span className="font-bold">{event.cropName}</span>
                     </p>
-                    {event.timestamp && (
-                      <p className="text-xs text-gray-400 mt-0.5">{formatDate(event.timestamp)}</p>
-                    )}
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {event.farmName}{event.region ? ` · ${event.region}` : ""}
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-semibold text-[#1B5E55]">
-                      {event.amountUsdc}{" "}
+                      {formatUsdc(event.amountUsdc)}{" "}
                       <span className="font-normal text-gray-400">USDC</span>
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">Block #{event.blockNumber.toString()}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{formatDate(event.date)}</p>
                   </div>
                 </div>
 
-                <div className="mt-2">
-                  <TxLink hash={event.txHash} />
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="text-xs text-gray-500">
+                    {event.quantityUnits} {event.unitType}
+                  </span>
+                  {event.type === "redeem" && event.deliveryAddress && (
+                    <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                      → {event.deliveryAddress}
+                    </span>
+                  )}
+                  {event.txHash && (
+                    <TxLink hash={event.txHash} chainId={chainId} />
+                  )}
                 </div>
               </div>
             </div>
