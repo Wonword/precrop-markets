@@ -11,8 +11,9 @@ import {
   Search,
   Wallet,
 } from "lucide-react";
-import { useAccount, usePublicClient } from "wagmi";
-import { parseAbiItem } from "viem";
+import { useAccount } from "wagmi";
+import { createPublicClient, http, parseAbiItem } from "viem";
+import { base, baseSepolia } from "wagmi/chains";
 import { CONTRACT_ADDRESSES, NFT_ABI, contractsReady, fromUsdcAtoms } from "@/lib/web3/contracts";
 
 type EventType = "purchase" | "redeem";
@@ -64,14 +65,19 @@ function formatDate(timestamp?: number) {
 export default function BuyerHistoryPage() {
   const { address, isConnected } = useAccount();
   const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
-  const publicClient = usePublicClient({ chainId });
+
+  // Use the public (non-Alchemy) RPC for getLogs — Alchemy free tier caps at 10 blocks
+  const logsClient = createPublicClient({
+    chain: chainId === 8453 ? base : baseSepolia,
+    transport: http(chainId === 8453 ? "https://mainnet.base.org" : "https://sepolia.base.org"),
+  });
 
   const [events, setEvents] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!address || !publicClient || !contractsReady) return;
+    if (!address || !contractsReady) return;
 
     setLoading(true);
     setError(null);
@@ -80,13 +86,13 @@ export default function BuyerHistoryPage() {
       try {
         // Fetch purchase and redeem logs in parallel
         const [purchaseLogs, redeemLogs] = await Promise.all([
-          publicClient.getLogs({
+          logsClient.getLogs({
             address: CONTRACT_ADDRESSES.market,
             event: PURCHASED_EVENT,
             args: { buyer: address },
             fromBlock: BigInt(0),
           }),
-          publicClient.getLogs({
+          logsClient.getLogs({
             address: CONTRACT_ADDRESSES.market,
             event: REDEEMED_EVENT,
             args: { buyer: address },
@@ -104,7 +110,7 @@ export default function BuyerHistoryPage() {
         await Promise.allSettled(
           Array.from(tokenIds).map(async (tokenId) => {
             try {
-              const uri = await publicClient.readContract({
+              const uri = await logsClient.readContract({
                 address: CONTRACT_ADDRESSES.nft,
                 abi: NFT_ABI,
                 functionName: "tokenURI",
@@ -137,7 +143,7 @@ export default function BuyerHistoryPage() {
         await Promise.allSettled(
           Array.from(blockNums).map(async (bn) => {
             try {
-              const block = await publicClient.getBlock({ blockNumber: bn });
+              const block = await logsClient.getBlock({ blockNumber: bn });
               blockTimestamps.set(bn.toString(), Number(block.timestamp));
             } catch {
               // timestamp unavailable
@@ -207,7 +213,8 @@ export default function BuyerHistoryPage() {
     };
 
     loadHistory();
-  }, [address, publicClient, chainId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address, chainId]);
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
