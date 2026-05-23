@@ -201,6 +201,25 @@ export const ERC20_ABI = [
   },
 ] as const;
 
+// ─── PrecropNFT ABI (minimal) ─────────────────────────────────────────────────
+
+export const NFT_ABI = [
+  {
+    name: "tokenURI",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "string" }],
+  },
+  {
+    name: "ownerOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "address" }],
+  },
+] as const;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Convert human-readable USDC (e.g. 500) → atomic units (6 decimals) */
