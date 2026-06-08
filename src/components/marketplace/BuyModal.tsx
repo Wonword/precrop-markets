@@ -95,19 +95,36 @@ export default function BuyModal({ contract, onClose, onSuccess }: BuyModalProps
   // When buy confirms → save to Supabase + success
   useEffect(() => {
     if (buySuccess && step === "buying") {
-      const supabase = createClient();
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (!user) return;
-        supabase.from("purchases").insert({
-          contract_id: contract.id,
-          buyer_id: user.id,
-          paid_usdc: contract.totalValueUsdc,
-          tx_hash: buyTxHash ?? null,
-        }).then(() => {
-          // Also mark contract as sold
-          supabase.from("contracts").update({ status: "sold" }).eq("id", contract.id);
-        });
-      });
+      // The NFT is already bought on-chain at this point, so DB persistence is
+      // best-effort — but a silent failure here would leave the buyer's paid
+      // purchase invisible in their portfolio, so we log any failure explicitly.
+      // (We intentionally do NOT update contracts.status here: RLS only lets the
+      // owning farmer mutate a contract, so a buyer-side update silently no-ops.
+      // The purchase row is the source of truth for buyer ownership.)
+      (async () => {
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            console.error("[BuyModal] purchase confirmed on-chain but no authenticated user to record it");
+            return;
+          }
+          const { error: purchaseError } = await supabase.from("purchases").insert({
+            contract_id: contract.id,
+            buyer_id: user.id,
+            paid_usdc: contract.totalValueUsdc,
+            tx_hash: buyTxHash ?? null,
+          });
+          if (purchaseError) {
+            console.error(
+              `[BuyModal] failed to record purchase for contract ${contract.id} (tx ${buyTxHash}):`,
+              purchaseError,
+            );
+          }
+        } catch (e) {
+          console.error("[BuyModal] unexpected error recording purchase:", e);
+        }
+      })();
       setStep("success");
     }
   }, [buySuccess, step, contract.id, contract.totalValueUsdc, buyTxHash]);
