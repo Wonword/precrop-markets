@@ -19,13 +19,9 @@ import { createClient } from "@/lib/supabase/server";
 import { NETWORK_LABEL } from "@/lib/web3/contracts";
 import type { CropContract, ContractStatus, CropCategory, QualityStandards } from "@/types/contract";
 
-// Pre-generate routes for the 11 canonical contracts so they're statically
-// built at deploy time. dynamicParams=true (Next.js default) means any id
-// not in this list is rendered on-demand from the DB — covers farmer-minted
-// contracts that come in after the build.
-export function generateStaticParams() {
-  return mockContracts.map((c) => ({ id: c.id }));
-}
+// The route is fully dynamic (server-side Supabase fetch uses cookies()).
+// All contract IDs — including farmer-minted ones not known at build time —
+// are served on-demand with live data.
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
