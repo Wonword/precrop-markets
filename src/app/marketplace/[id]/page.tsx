@@ -15,6 +15,7 @@ import Footer from "@/components/landing/Footer";
 import StatusBadge from "@/components/marketplace/StatusBadge";
 import BuyPanel from "@/components/marketplace/BuyPanel";
 import { mockContracts } from "@/lib/mockContracts";
+import { NETWORK_LABEL } from "@/lib/web3/contracts";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -282,7 +283,7 @@ export default async function ContractDetailPage({
                   On-Chain Details
                 </p>
                 {[
-                  { label: "Network", value: "Base Sepolia (Testnet)" },
+                  { label: "Network", value: NETWORK_LABEL },
                   { label: "Standard", value: "ERC-721" },
                   { label: "Token ID", value: `#${contract.tokenId}` },
                   { label: "Gas Fees", value: "Sponsored by Precrop" },

@@ -10,6 +10,7 @@ import {
   CONTRACT_ADDRESSES,
   contractsReady,
   toUsdcAtoms,
+  CHAIN_ID,
 } from "@/lib/web3/contracts";
 import { CropContract } from "@/types/contract";
 import { createClient } from "@/lib/supabase/client";
@@ -23,8 +24,7 @@ interface BuyModalProps {
 type Step = "idle" | "approving" | "approved" | "buying" | "success" | "error";
 
 function TxLink({ hash }: { hash: `0x${string}` }) {
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
-  const base = chainId === 8453
+  const base = CHAIN_ID === 8453
     ? "https://basescan.org/tx/"
     : "https://sepolia.basescan.org/tx/";
   return (
@@ -49,7 +49,7 @@ export default function BuyModal({ contract, onClose, onSuccess }: BuyModalProps
   const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | undefined>();
   const [buyTxHash, setBuyTxHash] = useState<`0x${string}` | undefined>();
 
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
+  const chainId = CHAIN_ID;
 
   // ── Read USDC allowance ──────────────────────────────────────────────────
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
@@ -120,6 +120,7 @@ export default function BuyModal({ contract, onClose, onSuccess }: BuyModalProps
         abi: ERC20_ABI,
         functionName: "approve",
         args: [CONTRACT_ADDRESSES.market, priceAtoms],
+        chainId: CHAIN_ID,
       });
       setApproveTxHash(hash);
     } catch (e: unknown) {
@@ -137,6 +138,7 @@ export default function BuyModal({ contract, onClose, onSuccess }: BuyModalProps
         abi: MARKET_ABI,
         functionName: "buy",
         args: [BigInt(contract.tokenId)],
+        chainId: CHAIN_ID,
       });
       setBuyTxHash(hash);
     } catch (e: unknown) {

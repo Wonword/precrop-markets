@@ -21,6 +21,8 @@ import {
   CONTRACT_ADDRESSES,
   contractsReady,
   toUsdcAtoms,
+  CHAIN_ID,
+  NETWORK_LABEL,
 } from "@/lib/web3/contracts";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -207,7 +209,9 @@ export default function CreateContractForm() {
     if (form.qsTestWeight)      qualityStandards.testWeight = form.qsTestWeight;
     if (form.qsSpecialMetrics)  qualityStandards.specialMetrics = form.qsSpecialMetrics;
 
-    await supabase.from("contracts").insert({
+    const contractId = `pcm-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const { error: insertError } = await supabase.from("contracts").insert({
+      id: contractId,
       token_id: tokenId,
       farm_id: farm?.id ?? null,
       crop_name: form.cropName,
@@ -230,6 +234,16 @@ export default function CreateContractForm() {
       contract_address: txHash ? CONTRACT_ADDRESSES.nft : null,
       minted_at: new Date().toISOString(),
     });
+
+    // Surface persistence failures instead of silently showing "Minted!"
+    // (a silent insert failure is what originally masked the empty-contracts bug).
+    if (insertError) {
+      console.error(
+        `[CreateContractForm.saveContractToSupabase] insert failed for contract ${contractId} (token ${tokenId}, farm ${farm?.id ?? "none"}):`,
+        insertError,
+      );
+      throw new Error(`Failed to save contract: ${insertError.message}`);
+    }
   };
 
   // ── wagmi mint hook ────────────────────────────────────────────────────────
@@ -240,10 +254,19 @@ export default function CreateContractForm() {
   // Watch for tx confirmation and save to Supabase
   useEffect(() => {
     if (mintTxSuccess && minting) {
-      saveContractToSupabase(mintedTokenId, mintTxHash).finally(() => {
-        setMinting(false);
-        setMinted(true);
-      });
+      // The NFT is already minted on-chain at this point, so DB persistence is
+      // best-effort: log a failure but still show success (chain is source of truth).
+      saveContractToSupabase(mintedTokenId, mintTxHash)
+        .catch((e) => {
+          console.error(
+            "[CreateContractForm] NFT minted on-chain but Supabase save failed:",
+            e,
+          );
+        })
+        .finally(() => {
+          setMinting(false);
+          setMinted(true);
+        });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mintTxSuccess]);
@@ -313,6 +336,7 @@ export default function CreateContractForm() {
         abi: MARKET_ABI,
         functionName: "mintAndList",
         args: [metadataURI, priceAtoms],
+        chainId: CHAIN_ID,
       });
       setMintTxHash(hash);
     } catch (e: unknown) {
@@ -889,7 +913,7 @@ export default function CreateContractForm() {
                 On-Chain Details
               </p>
               {[
-                { label: "Network", value: "Base (Mainnet)" },
+                { label: "Network", value: NETWORK_LABEL },
                 { label: "Token Standard", value: "ERC-721" },
                 { label: "Gas Fees", value: "Sponsored by Precrop ✓" },
                 { label: "Platform Fee", value: "2.5% at redemption" },
