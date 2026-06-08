@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { X, MapPin, Check, PackageCheck, Loader2, ExternalLink } from "lucide-react";
 import { CropContract } from "@/types/contract";
-import { MARKET_ABI, CONTRACT_ADDRESSES, contractsReady } from "@/lib/web3/contracts";
+import { MARKET_ABI, CONTRACT_ADDRESSES, contractsReady, CHAIN_ID } from "@/lib/web3/contracts";
 
 interface RedeemModalProps {
   contract: CropContract;
@@ -16,8 +16,7 @@ interface RedeemModalProps {
 const steps = ["Delivery Details", "Confirm & Sign", "Done"];
 
 function TxLink({ hash }: { hash: `0x${string}` }) {
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
-  const base = chainId === 8453
+  const base = CHAIN_ID === 8453
     ? "https://basescan.org/tx/"
     : "https://sepolia.basescan.org/tx/";
   return (
@@ -73,6 +72,7 @@ export default function RedeemModal({
         abi: MARKET_ABI,
         functionName: "redeem",
         args: [BigInt(contract.tokenId)],
+        chainId: CHAIN_ID,
       });
       setRedeemTxHash(hash);
     } catch (e: unknown) {

@@ -21,6 +21,20 @@ export const contractsReady =
   CONTRACT_ADDRESSES.market.startsWith("0x") &&
   CONTRACT_ADDRESSES.usdc.startsWith("0x");
 
+// ─── Active chain ─────────────────────────────────────────────────────────────
+
+/** Active chain ID — 8453 (Base mainnet) | 84532 (Base Sepolia testnet) */
+export const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
+
+/**
+ * Human-readable label for the active network.
+ * Single source of truth so the UI never misreports the chain it actually
+ * transacts on (previously the create-contract form hard-coded "Base (Mainnet)"
+ * while the app was deployed against Base Sepolia).
+ */
+export const NETWORK_LABEL =
+  CHAIN_ID === 8453 ? "Base (Mainnet)" : "Base Sepolia (Testnet)";
+
 // ─── PrecropMarket ABI (minimal) ──────────────────────────────────────────────
 
 export const MARKET_ABI = [

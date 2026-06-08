@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Clock, ArrowUpRight, PackageCheck, ShoppingBag, Loader2, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/lib/supabase/client";
+import { CHAIN_ID } from "@/lib/web3/contracts";
 
 type HistoryEvent = {
   id: string;
@@ -57,7 +58,7 @@ export default function BuyerHistoryPage() {
   const { user, loading: authLoading } = useAuth();
   const [events, setEvents] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
+  const chainId = CHAIN_ID;
 
   const fetchHistory = useCallback(async () => {
     if (!user?.id) return;
