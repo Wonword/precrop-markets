@@ -66,7 +66,12 @@ export default function BuyerPortfolioPage() {
         qualityStandards: (c?.quality_standards as QualityStandards) ?? undefined,
         dockage: c?.dockage ? String(c.dockage) : undefined,
         notes: c?.notes ? String(c.notes) : undefined,
-        status: (c?.status as ContractStatus) ?? "sold",
+        // Redemption is tracked on the purchase row (buyers can't mutate
+        // contracts.status under RLS), so derive the displayed status from it:
+        // a redeemed purchase shows as "redeemed" regardless of contract.status.
+        status: row.redeemed_at
+          ? "redeemed"
+          : ((c?.status as ContractStatus) ?? "sold"),
         description: String(c?.description ?? ""),
         placeholderGradient: String(c?.placeholder_gradient ?? "from-[#1B5E55] to-[#88C057]"),
         mintedAt: String(c?.minted_at ?? new Date().toISOString()),
