@@ -15,7 +15,13 @@ import Footer from "@/components/landing/Footer";
 import StatusBadge from "@/components/marketplace/StatusBadge";
 import BuyPanel from "@/components/marketplace/BuyPanel";
 import { mockContracts } from "@/lib/mockContracts";
+import { createClient } from "@/lib/supabase/server";
 import { NETWORK_LABEL } from "@/lib/web3/contracts";
+import type { CropContract, ContractStatus, CropCategory, QualityStandards } from "@/types/contract";
+
+// The route is fully dynamic (server-side Supabase fetch uses cookies()).
+// All contract IDs — including farmer-minted ones not known at build time —
+// are served on-demand with live data.
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -26,8 +32,48 @@ function formatDate(iso: string) {
   });
 }
 
-export function generateStaticParams() {
-  return mockContracts.map((c) => ({ id: c.id }));
+// Map a Supabase contracts row (with optional farms join) to a CropContract.
+// For seeded contracts that have no linked farm record, falls back to the
+// corresponding mockContracts entry for farm name / location fields.
+function rowToContract(row: Record<string, unknown>): CropContract {
+  const farm = row.farms as Record<string, unknown> | null;
+  const mock = mockContracts.find((m) => m.id === String(row.id));
+  const qs = row.quality_standards as QualityStandards | null;
+
+  return {
+    id: String(row.id),
+    tokenId: Number(row.token_id ?? mock?.tokenId ?? 0),
+    cropName: String(row.crop_name ?? mock?.cropName ?? ""),
+    cropCategory: (row.crop_category ?? mock?.cropCategory ?? "specialty") as CropCategory,
+    farmName: String(farm?.farm_name ?? mock?.farmName ?? ""),
+    farmerName: String(farm?.contact_name ?? mock?.farmerName ?? ""),
+    farmerEmail: (farm?.email as string | undefined) ?? mock?.farmerEmail,
+    farmerPhone: (farm?.phone as string | undefined) ?? mock?.farmerPhone,
+    region: String(farm?.region ?? mock?.region ?? ""),
+    state: String(farm?.state ?? mock?.state ?? ""),
+    country: String(farm?.country ?? mock?.country ?? "USA"),
+    harvestDate: row.harvest_date ? String(row.harvest_date) : mock?.harvestDate,
+    deliveryDate: String(row.delivery_date ?? mock?.deliveryDate ?? ""),
+    deliveryMethod: row.delivery_method ? String(row.delivery_method) : mock?.deliveryMethod,
+    deliveryLocation: row.delivery_location ? String(row.delivery_location) : mock?.deliveryLocation,
+    quantityUnits: Number(row.quantity_units ?? mock?.quantityUnits ?? 0),
+    unitType: String(row.unit_type ?? mock?.unitType ?? ""),
+    unitSizeLbs: row.unit_size_lbs != null ? Number(row.unit_size_lbs) : mock?.unitSizeLbs,
+    pricePerUnitUsdc: Number(row.price_per_unit_usdc ?? mock?.pricePerUnitUsdc ?? 0),
+    totalValueUsdc: Number(row.total_value_usdc ?? mock?.totalValueUsdc ?? 0),
+    gradingStandard: row.grading_standard ? String(row.grading_standard) : mock?.gradingStandard,
+    qualityStandards: (qs ?? mock?.qualityStandards) ?? undefined,
+    dockage: row.dockage ? String(row.dockage) : mock?.dockage,
+    notes: row.notes ? String(row.notes) : mock?.notes,
+    status: (row.status ?? mock?.status ?? "available") as ContractStatus,
+    description: String(row.description ?? mock?.description ?? ""),
+    placeholderGradient: String(
+      row.placeholder_gradient ?? mock?.placeholderGradient ?? "from-[#1B5E55] to-[#88C057]"
+    ),
+    mintedAt: String(row.minted_at ?? mock?.mintedAt ?? new Date().toISOString()),
+    contractAddress: row.contract_address ? String(row.contract_address) : mock?.contractAddress,
+    imageUrl: row.image_url ? String(row.image_url) : mock?.imageUrl,
+  };
 }
 
 export default async function ContractDetailPage({
@@ -36,7 +82,34 @@ export default async function ContractDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const contract = mockContracts.find((c) => c.id === id);
+
+  // Try the DB first so farmer-minted contracts (not in mockContracts) are
+  // accessible, and so live status changes (e.g. sold) are reflected.
+  let contract: CropContract | undefined;
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("contracts")
+      .select("*, farms(farm_name, contact_name, region, state, country, email, phone)")
+      .eq("id", id)
+      .single();
+
+    if (!error && data) {
+      contract = rowToContract(data as unknown as Record<string, unknown>);
+    } else if (error && error.code !== "PGRST116") {
+      // PGRST116 = "no rows returned" — that's expected for unknown IDs, don't log it
+      console.error(`[ContractDetailPage] DB error for id=${id}:`, error);
+    }
+  } catch (e) {
+    console.error(`[ContractDetailPage] unexpected error fetching id=${id}:`, e);
+  }
+
+  // Fall back to mock data (covers edge cases where DB is unreachable)
+  if (!contract) {
+    const mock = mockContracts.find((c) => c.id === id);
+    if (mock) contract = mock;
+  }
+
   if (!contract) notFound();
 
   return (

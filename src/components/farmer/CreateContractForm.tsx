@@ -15,6 +15,8 @@ import {
   Info,
   Wallet,
   Loader2,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import {
   MARKET_ABI,
@@ -150,6 +152,8 @@ export default function CreateContractForm() {
   const { openConnectModal } = useConnectModal();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormData>(initialForm);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>("");
   const [minting, setMinting] = useState(false);
   const [minted, setMinted] = useState(false);
   const [mintTxHash, setMintTxHash] = useState<`0x${string}` | undefined>();
@@ -210,6 +214,27 @@ export default function CreateContractForm() {
     if (form.qsSpecialMetrics)  qualityStandards.specialMetrics = form.qsSpecialMetrics;
 
     const contractId = `pcm-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+    // Upload crop image to Supabase storage if the farmer provided one.
+    // Storage bucket 'crop-images' is public so the URL is stable and permanent.
+    let imageUrl: string | null = null;
+    if (imageFile) {
+      const ext = imageFile.name.split(".").pop() ?? "jpg";
+      const storagePath = `${contractId}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("crop-images")
+        .upload(storagePath, imageFile, { contentType: imageFile.type, upsert: false });
+      if (uploadError) {
+        console.error("[CreateContractForm] image upload failed:", uploadError);
+        // Non-fatal: contract still saves, just without image
+      } else {
+        const { data: urlData } = supabase.storage
+          .from("crop-images")
+          .getPublicUrl(storagePath);
+        imageUrl = urlData.publicUrl;
+      }
+    }
+
     const { error: insertError } = await supabase.from("contracts").insert({
       id: contractId,
       token_id: tokenId,
@@ -232,6 +257,7 @@ export default function CreateContractForm() {
       status: "available",
       placeholder_gradient: "from-[#1B5E55] to-[#88C057]",
       contract_address: txHash ? CONTRACT_ADDRESSES.nft : null,
+      image_url: imageUrl,
       minted_at: new Date().toISOString(),
     });
 
@@ -411,6 +437,8 @@ export default function CreateContractForm() {
           <button
             onClick={() => {
               setForm(initialForm);
+              setImageFile(null);
+              setImagePreviewUrl("");
               setStep(1);
               setMinted(false);
             }}
@@ -537,6 +565,39 @@ export default function CreateContractForm() {
                 onChange={set("gradingStandard")}
                 className={inputClass}
               />
+            </Field>
+
+            <Field label="Crop Photo" hint="Optional. Shown in the marketplace listing. Square or landscape works best.">
+              {imagePreviewUrl ? (
+                <div className="relative rounded-xl overflow-hidden border border-gray-200 h-40">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imagePreviewUrl} alt="Crop preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => { setImageFile(null); setImagePreviewUrl(""); }}
+                    className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-2 h-40 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#1B5E55] hover:bg-[#1B5E55]/5 transition-all cursor-pointer text-gray-400 hover:text-[#1B5E55]">
+                  <ImagePlus size={24} />
+                  <span className="text-xs font-medium">Click to upload photo</span>
+                  <span className="text-xs opacity-60">JPG, PNG, WEBP up to 10 MB</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setImageFile(file);
+                      setImagePreviewUrl(URL.createObjectURL(file));
+                    }}
+                  />
+                </label>
+              )}
             </Field>
 
             {/* Quality Standards */}

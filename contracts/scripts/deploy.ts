@@ -10,7 +10,9 @@ async function main() {
   }
 
   const [deployer] = await ethers.getSigners();
-  const FEE_RECIPIENT = process.env.FEE_RECIPIENT || deployer.address;
+  // Official Precrop Markets wallet — receives the platform royalty fee on every sale.
+  const PRECROP_FEE_WALLET = "0x8E40C98EcbF2C928E9177D4DC1d989C2c5BfDad2";
+  const FEE_RECIPIENT = process.env.FEE_RECIPIENT || PRECROP_FEE_WALLET;
   console.log("Deploying with:", deployer.address);
 
   // 1. Deploy PrecropNFT

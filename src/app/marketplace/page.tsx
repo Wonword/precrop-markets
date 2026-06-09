@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Plus, Sprout } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
@@ -8,7 +8,52 @@ import Footer from "@/components/landing/Footer";
 import ContractCard from "@/components/marketplace/ContractCard";
 import FilterBar from "@/components/marketplace/FilterBar";
 import { mockContracts } from "@/lib/mockContracts";
-import { CropContract, ContractStatus, CropCategory } from "@/types/contract";
+import { createClient } from "@/lib/supabase/client";
+import type { CropContract, ContractStatus, CropCategory, QualityStandards } from "@/types/contract";
+
+// Map a Supabase contracts row (with optional farms join) to a CropContract.
+// For seeded contracts that have no linked farm record, falls back to the
+// corresponding mockContracts entry for farm name / location fields.
+function rowToContract(row: Record<string, unknown>): CropContract {
+  const farm = row.farms as Record<string, unknown> | null;
+  const mock = mockContracts.find((m) => m.id === String(row.id));
+  const qs = row.quality_standards as QualityStandards | null;
+
+  return {
+    id: String(row.id),
+    tokenId: Number(row.token_id ?? mock?.tokenId ?? 0),
+    cropName: String(row.crop_name ?? mock?.cropName ?? ""),
+    cropCategory: (row.crop_category ?? mock?.cropCategory ?? "specialty") as CropCategory,
+    farmName: String(farm?.farm_name ?? mock?.farmName ?? ""),
+    farmerName: String(farm?.contact_name ?? mock?.farmerName ?? ""),
+    farmerEmail: (farm?.email as string | undefined) ?? mock?.farmerEmail,
+    farmerPhone: (farm?.phone as string | undefined) ?? mock?.farmerPhone,
+    region: String(farm?.region ?? mock?.region ?? ""),
+    state: String(farm?.state ?? mock?.state ?? ""),
+    country: String(farm?.country ?? mock?.country ?? "USA"),
+    harvestDate: row.harvest_date ? String(row.harvest_date) : mock?.harvestDate,
+    deliveryDate: String(row.delivery_date ?? mock?.deliveryDate ?? ""),
+    deliveryMethod: row.delivery_method ? String(row.delivery_method) : mock?.deliveryMethod,
+    deliveryLocation: row.delivery_location ? String(row.delivery_location) : mock?.deliveryLocation,
+    quantityUnits: Number(row.quantity_units ?? mock?.quantityUnits ?? 0),
+    unitType: String(row.unit_type ?? mock?.unitType ?? ""),
+    unitSizeLbs: row.unit_size_lbs != null ? Number(row.unit_size_lbs) : mock?.unitSizeLbs,
+    pricePerUnitUsdc: Number(row.price_per_unit_usdc ?? mock?.pricePerUnitUsdc ?? 0),
+    totalValueUsdc: Number(row.total_value_usdc ?? mock?.totalValueUsdc ?? 0),
+    gradingStandard: row.grading_standard ? String(row.grading_standard) : mock?.gradingStandard,
+    qualityStandards: (qs ?? mock?.qualityStandards) ?? undefined,
+    dockage: row.dockage ? String(row.dockage) : mock?.dockage,
+    notes: row.notes ? String(row.notes) : mock?.notes,
+    status: (row.status ?? mock?.status ?? "available") as ContractStatus,
+    description: String(row.description ?? mock?.description ?? ""),
+    placeholderGradient: String(
+      row.placeholder_gradient ?? mock?.placeholderGradient ?? "from-[#1B5E55] to-[#88C057]"
+    ),
+    mintedAt: String(row.minted_at ?? mock?.mintedAt ?? new Date().toISOString()),
+    contractAddress: row.contract_address ? String(row.contract_address) : mock?.contractAddress,
+    imageUrl: row.image_url ? String(row.image_url) : mock?.imageUrl,
+  };
+}
 
 export default function MarketplacePage() {
   const [search, setSearch] = useState("");
@@ -16,8 +61,35 @@ export default function MarketplacePage() {
   const [status, setStatus] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
+  // Seed with mock data so the page renders immediately on first paint,
+  // then replace with live DB data so farmer-minted contracts appear too.
+  const [contracts, setContracts] = useState<CropContract[]>(mockContracts);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("contracts")
+          .select("*, farms(farm_name, contact_name, region, state, country, email, phone)")
+          .order("minted_at", { ascending: false });
+
+        if (error) {
+          console.error("[MarketplacePage] failed to fetch contracts from DB:", error);
+          return; // keep mock data
+        }
+
+        if (data && data.length > 0) {
+          setContracts((data as unknown as Array<Record<string, unknown>>).map(rowToContract));
+        }
+      } catch (e) {
+        console.error("[MarketplacePage] unexpected error fetching contracts:", e);
+      }
+    })();
+  }, []);
+
   const filtered = useMemo(() => {
-    let result: CropContract[] = [...mockContracts];
+    let result: CropContract[] = [...contracts];
 
     // Search
     if (search.trim()) {
@@ -69,13 +141,10 @@ export default function MarketplacePage() {
     }
 
     return result;
-  }, [search, category, status, sortBy]);
+  }, [search, category, status, sortBy, contracts]);
 
-  const openCount = mockContracts.filter((c) => c.status === "available").length;
-  const totalUsdc = mockContracts.reduce(
-    (sum, c) => sum + c.totalValueUsdc,
-    0
-  );
+  const openCount = contracts.filter((c) => c.status === "available").length;
+  const totalUsdc = contracts.reduce((sum, c) => sum + c.totalValueUsdc, 0);
 
   return (
     <div className="min-h-screen bg-[#F2F4F3] flex flex-col">
@@ -118,7 +187,7 @@ export default function MarketplacePage() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-white">
-                {mockContracts.length}
+                {contracts.length}
               </div>
               <div className="text-xs text-white/50 mt-1">Total Listings</div>
             </div>
